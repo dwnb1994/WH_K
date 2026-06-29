@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ปฏิรูประบบข้อมูลหน้างานสู่ต้นทุน Real-time — เหมืองทองเซโปน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#16263A; --navy2:#1F3551; --navy3:#21344C;
+    --ink:#1E2A37; --ink2:#33414F; --muted:#6B7C8E;
+    --gold:#E0A11B; --gold-d:#B9810F; --goldbg:#FBF1DA;
+    --steel:#2C7DA0; --steelbg:#E7F1F6;
+    --green:#2E8B6F; --greenbg:#E4F1EC; --rust:#C2603A; --rustbg:#F7E9E2;
+    --bg:#EEF1F4; --surface:#fff; --line:#E2E8EE; --line2:#D3DCE5;
+    --ui:'IBM Plex Sans Thai','IBM Plex Sans',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+    --shadow:0 10px 30px -12px rgba(11,23,34,.22);
+    --shadow-sm:0 4px 14px -6px rgba(11,23,34,.18);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--ui);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 26px}
+  .en{font-family:'IBM Plex Sans',var(--ui)}
+  .mono{font-family:var(--mono)}
+
+  /* hatch motif for dark panels */
+  .hatch{position:relative;overflow:hidden}
+  .hatch::before{content:'';position:absolute;inset:0;
+    background:repeating-linear-gradient(45deg,rgba(224,161,27,.05) 0 1px,transparent 1px 26px);pointer-events:none}
+
+  /* top bar */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(16,38,58,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid rgba(224,161,27,.18)}
+  .topbar .wrap{display:flex;align-items:center;gap:14px;height:56px}
+  .brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px}
+  .brand .gem{width:22px;height:22px;color:var(--gold)}
+  .navlinks{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .navlinks a{font-size:12.5px;font-weight:600;color:#AFC0D2;padding:6px 11px;border-radius:8px;transition:.15s}
+  .navlinks a:hover{color:#fff;background:rgba(255,255,255,.08)}
+  @media(max-width:820px){.navlinks{display:none}}
+
+  /* hero */
+  .hero{background:linear-gradient(135deg,#12203250 0%,var(--navy) 40%),radial-gradient(circle at 80% 20%,#284a6e 0%,var(--navy) 60%);background-color:var(--navy);color:#fff;padding:78px 0 70px}
+  .kicker{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+  .hero h1{font-size:clamp(34px,5vw,56px);font-weight:800;line-height:1.08;letter-spacing:-.01em}
+  .hero .lead{font-size:clamp(16px,2vw,20px);color:#C2D2E4;margin-top:20px;max-width:760px}
+  .hero .by{margin-top:22px;font-size:14px;color:#8FA4BC;font-style:italic}
+  .chips{display:flex;gap:11px;flex-wrap:wrap;margin-top:34px}
+  .chip{display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,.06);border:1px solid rgba(224,161,27,.28);
+    border-radius:99px;padding:9px 16px 9px 12px;font-weight:600;font-size:14px;color:#EAF1F8}
+  .chip .ico{width:18px;height:18px;color:var(--gold)}
+
+  /* sections */
+  section{padding:62px 0}
+  section.alt{background:var(--surface)}
+  .shead{display:flex;align-items:flex-start;gap:14px;margin-bottom:30px}
+  .snum{flex:0 0 auto;width:46px;height:46px;border-radius:13px;background:var(--gold);color:var(--navy);
+    font-family:var(--mono);font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
+  .shead h2{font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.01em;color:var(--navy)}
+  .shead p{font-size:14.5px;color:var(--muted);margin-top:4px;max-width:780px}
+
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow-sm)}
+  section.alt .card{background:#fff;box-shadow:var(--shadow-sm)}
+  .card.dark{background:var(--navy);color:#fff;border-color:#27405b}
+  .card.gold{background:var(--goldbg);border-color:#EBD8A8}
+  .card h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px}
+  .card.dark h3{color:#fff}
+  .card p{font-size:13.7px;color:var(--ink2)}
+  .card.dark p{color:#C2D2E4}
+  .muted{color:var(--muted)!important}
+
+  .ico{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+  .ico.fill{fill:currentColor;stroke:none}
+  .badge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
+  .badge .ico{width:54%;height:54%}
+  .b-lg{width:56px;height:56px}
+  .b-md{width:46px;height:46px}
+  .b-sm{width:36px;height:36px}
+  .bg-gold{background:var(--goldbg);color:var(--gold-d)}
+  .bg-steel{background:var(--steelbg);color:var(--steel)}
+  .bg-green{background:var(--greenbg);color:var(--green)}
+  .bg-rust{background:var(--rustbg);color:var(--rust)}
+  .bg-dark{background:#27405b;color:var(--gold)}
+
+  .row{display:flex;gap:14px;align-items:flex-start}
+  .tag{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+
+  .stat{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .accent{color:var(--gold)}
+
+  /* flow */
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;align-items:stretch}
+  @media(max-width:900px){.flow{grid-template-columns:1fr;gap:10px}}
+  .flow .node{position:relative;text-align:center;padding:0 8px}
+  .flow .node .card{height:100%}
+  .flow .arrow{display:none}
+  .flowwrap{display:flex;align-items:stretch;gap:0}
+
+  .pill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line2);border-radius:99px;
+    padding:8px 14px;font-size:13px;font-weight:600;color:var(--navy)}
+
+  .li{display:flex;gap:11px;align-items:flex-start;padding:7px 0}
+  .li .dot{flex:0 0 auto;margin-top:3px;width:18px;height:18px;color:var(--gold)}
+  .li .dot.green{color:var(--green)}
+  .li b{color:var(--navy)}
+  .card.dark .li b{color:#fff}
+  .card.dark .li{color:#C2D2E4}
+
+  .ladder{display:flex;flex-direction:column;gap:10px}
+  .step{display:flex;align-items:center;gap:13px;background:var(--navy3);border-radius:11px;padding:12px 15px}
+  .step.last{background:var(--gold)}
+  .step .badge{width:38px;height:38px;background:#16263A;color:var(--gold)}
+  .step.last .badge{background:#F2DCA0;color:var(--navy)}
+  .step .t{font-weight:700;font-size:15px;color:#fff}
+  .step .d{font-size:11.5px;color:#9FB2C8}
+  .step.last .t{color:var(--navy)} .step.last .d{color:#5A4310}
+  .ladder .arr{display:flex;justify-content:center;color:var(--gold);margin:-4px 0}
+  .ladder .arr .ico{width:18px;height:18px;transform:rotate(90deg)}
+
+  footer{background:var(--navy);color:#9FB2C8;padding:34px 0;font-size:13px}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  footer .ftags{display:flex;gap:8px;flex-wrap:wrap}
+  footer .ftag{font-family:var(--mono);font-size:11px;font-weight:600;color:#C2D2E4;background:rgba(255,255,255,.06);border:1px solid #2a4258;border-radius:7px;padding:4px 9px}
+
+  .note{display:flex;gap:12px;align-items:flex-start;background:var(--goldbg);border:1px solid #EBD8A8;border-radius:14px;padding:16px 18px}
+  .note .ico{color:var(--gold-d)}
+</style>
+</head>
+<body>
+
+<!-- SVG icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-gem" viewBox="0 0 24 24"><path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18M9 3 6 9l6 12 6-12-3-6"/></symbol>
+<symbol id="i-tri" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17.4" r="1" class="fill"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" class="fill"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path class="fill" d="M13 2 5 13h6l-1 9 9-12h-6z"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.4" class="fill"/><circle cx="17" cy="20" r="1.4" class="fill"/><path d="M3 4h2l2.3 11.4a1 1 0 0 0 1 .8h8.5a1 1 0 0 0 1-.8L20 8H6"/></symbol>
+<symbol id="i-ware" viewBox="0 0 24 24"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-7h10v7"/></symbol>
+<symbol id="i-gas" viewBox="0 0 24 24"><rect x="4" y="4" width="9" height="16" rx="1.5"/><path d="M7 9h3"/><path d="M13 8l3.5 3v6a1.8 1.8 0 0 0 3.5 0V9l-3-3"/><path d="M3 20h11"/></symbol>
+<symbol id="i-food" viewBox="0 0 24 24"><path d="M6 3v7a2 2 0 0 0 4 0V3"/><path d="M8 10v11"/><path d="M17 3c-2 0-3 2.4-3 5.5S15 13 17 13v8"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.3l3 1.7"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M9.5 14.5l5-5"/><path d="M10 6.5 11.5 5a4 4 0 0 1 5.7 5.7L15.7 12"/><path d="M14 17.5 12.5 19a4 4 0 0 1-5.7-5.7L8.3 12"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 5v14h16"/><path d="M7 14l4-4 3 3 5-6"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+<symbol id="i-sync" viewBox="0 0 24 24"><path d="M4 11a8 8 0 0 1 13.7-5.3L20 8"/><path d="M20 13a8 8 0 0 1-13.7 5.3L4 16"/><path d="M20 4v4h-4M4 20v-4h4"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 .3-8A5 5 0 0 1 17 8.5 3.6 3.6 0 0 1 17 18z"/></symbol>
+<symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="6" rx="1.5"/><rect x="4" y="14" width="16" height="6" rx="1.5"/><path d="M8 7h.01M8 17h.01"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/></symbol>
+<symbol id="i-mobile" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+<symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.6 3.1 3 7 3s7-1.4 7-3V6"/><path d="M5 12c0 1.6 3.1 3 7 3s7-1.4 7-3"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 3-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="18" cy="9" r="2"/><path d="M16.5 14.2c2 .5 3.5 2.1 3.5 4.3"/></symbol>
+<symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></symbol>
+</defs></svg>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand"><svg class="ico gem"><use href="#i-gem"/></svg> โครงการต้นทุน Real-time · เซโปน</div>
+    <nav class="navlinks">
+      <a href="#why">ที่มา</a><a href="#goal">เป้าหมาย</a><a href="#map">5 งาน</a>
+      <a href="#bridge">งบสะพาน</a><a href="#purchase">จัดซื้อ</a><a href="#fuel">น้ำมัน</a>
+      <a href="#store">คลังพัสดุ</a><a href="#kitchen">โรงครัว</a><a href="#road">Roadmap</a>
+    </nav>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="hero hatch">
+  <div class="wrap" style="position:relative;z-index:1">
+    <div class="kicker">โครงการระบบข้อมูล · เหมืองทองเซโปน (LXML)</div>
+    <h1>ปฏิรูประบบข้อมูลหน้างาน<br/>สู่ต้นทุนแบบ <span class="accent">Real-time</span></h1>
+    <p class="lead">ทำให้ข้อมูลหน้างานครบ ถูกต้อง และเร็วพอ — เพื่อทำต้นทุนที่วิเคราะห์ได้จริง วัดผลผลิตงานเหมือง (เจาะ · ระเบิด · ขุดขน) เทียบต้นทุนที่ใช้ไปต่อ ตัน/BCM</p>
+    <div class="chips">
+      <span class="chip"><svg class="ico"><use href="#i-doc"/></svg>บัญชี</span>
+      <span class="chip"><svg class="ico"><use href="#i-cart"/></svg>จัดซื้อ</span>
+      <span class="chip"><svg class="ico"><use href="#i-ware"/></svg>คลังพัสดุ</span>
+      <span class="chip"><svg class="ico"><use href="#i-gas"/></svg>คลังน้ำมัน</span>
+      <span class="chip"><svg class="ico"><use href="#i-food"/></svg>คลังโรงครัว</span>
+    </div>
+    <div class="by">จัดทำโดย NB · หัวหน้าบัญชี &nbsp;|&nbsp; มิถุนายน 2026</div>
+  </div>
+</header>
+
+<!-- WHY -->
+<section id="why" class="alt">
+  <div class="wrap">
+    <div class="shead"><div class="snum">01</div><div><h2>ที่มา: ทำไมต้องเริ่มโครงการนี้</h2><p>NB หัวหน้าบัญชี เห็นปัญหาจากการนั่งทำงบต้นทุนเอง</p></div></div>
+    <div class="grid g2">
+      <div class="card dark hatch" style="position:relative">
+        <div style="position:relative;z-index:1">
+          <div class="row" style="align-items:center;margin-bottom:18px">
+            <span class="badge b-md bg-dark"><svg class="ico"><use href="#i-tri"/></svg></span>
+            <span class="tag accent">ปัญหาราก</span>
+          </div>
+          <p style="font-size:23px;font-weight:700;color:#fff;line-height:1.3">งบต้นทุนเดิมเป็นการ <span class="accent">“รวมเลขทางบัญชี”</span> ไม่ได้แตกส่วนของต้นทุนออกมา</p>
+          <p style="margin-top:16px">พอต้นทุนผิดปกติ ก็หาสาเหตุไม่ได้ — และระบบหน้างานเดิมยังไม่พร้อมป้อนข้อมูลที่ดีพอสำหรับการทำต้นทุน</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card"><div class="row"><span class="badge b-md bg-rust"><svg class="ico"><use href="#i-box"/></svg></span><div><h3>ของไม่ผ่านคลัง</h3><p>ซื้อแล้วเข้าหน้างานเลย — ยอดซื้อกับยอดเบิกต่างกันมาก ตามรอยการใช้จริงไม่ได้</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-md bg-rust"><svg class="ico"><use href="#i-clock"/></svg></span><div><h3>ข้อมูลออกช้า</h3><p>ต้องกรอกมือหลายชั้น กว่าจะรวมเป็นงบได้ก็ช้าเกินใช้บริหารหน้างาน</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-md bg-rust"><svg class="ico"><use href="#i-search"/></svg></span><div><h3>วิเคราะห์ไม่ได้</h3><p>ไม่รู้ว่าต้นทุนก้อนไหนไปกับงานเจาะ/ระเบิด/ขุดขน — วัดประสิทธิภาพต่อ BCM ไม่ได้</p></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GOAL -->
+<section id="goal">
+  <div class="wrap">
+    <div class="shead"><div class="snum">02</div><div><h2>เป้าหมายของโครงการ</h2><p>จัดการข้อมูลให้ครบก่อน แล้วต้นทุนที่ออกมาถึงจะสมบูรณ์พอไปวิเคราะห์ต่อ</p></div></div>
+    <div class="grid g3" style="margin-bottom:18px">
+      <div class="card"><span class="badge b-lg bg-green" style="margin-bottom:14px"><svg class="ico"><use href="#i-check"/></svg></span><h3>ข้อมูลครบถ้วน</h3><p>ดันทุกการซื้อ–รับ–เบิก ให้เข้าระบบ 100% ไม่ตกหล่น</p></div>
+      <div class="card"><span class="badge b-lg bg-gold" style="margin-bottom:14px"><svg class="ico"><use href="#i-bolt"/></svg></span><h3>เร็วใกล้ Real-time</h3><p>เห็นต้นทุนทันทีที่เกิดรายการ ไม่ต้องรอปิดงบ</p></div>
+      <div class="card"><span class="badge b-lg bg-steel" style="margin-bottom:14px"><svg class="ico"><use href="#i-cog"/></svg></span><h3>เป็น Digital ทั้งหมด</h3><p>เลิกกรอกมือ ใช้แสกน + ลิงก์ข้อมูลอัตโนมัติ</p></div>
+    </div>
+    <div class="card dark hatch"><div class="row" style="position:relative;z-index:1;align-items:center">
+      <span class="badge b-lg bg-dark"><svg class="ico"><use href="#i-target"/></svg></span>
+      <div><span class="tag accent">ผลที่ต้องการ</span>
+      <p style="margin-top:6px;font-size:16.5px"><b style="color:#fff">ต้นทุนที่ “เล่าเรื่องในโครงการได้”</b> — ออกเร็วที่สุด ถูกต้องสมบูรณ์พอจะวิเคราะห์และบริหารหน้างานได้ถูกทิศ</p></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section id="map" class="alt">
+  <div class="wrap">
+    <div class="shead"><div class="snum">03</div><div><h2>ภาพรวม: 5 งานที่สัมพันธ์กัน</h2><p>ทุกฟังก์ชันคือ “ต้นน้ำ” ที่ป้อนเข้างบต้นทุนเดียวกัน</p></div></div>
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="card"><span class="badge b-lg bg-steel" style="margin-bottom:12px"><svg class="ico"><use href="#i-cart"/></svg></span><h3>จัดซื้อ</h3><p>ติดตามงาน กันออเดอร์หลุด</p><div class="tag" style="color:var(--green);margin-top:10px">● เสร็จแล้ว</div></div>
+      <div class="card"><span class="badge b-lg bg-gold" style="margin-bottom:12px"><svg class="ico"><use href="#i-ware"/></svg></span><h3>คลังพัสดุ</h3><p>ของผ่านคลัง 100% ผูกต้นทุนต่อรถ</p><div class="tag" style="color:var(--green);margin-top:10px">● สร้างแล้ว</div></div>
+      <div class="card"><span class="badge b-lg bg-steel" style="margin-bottom:12px"><svg class="ico"><use href="#i-gas"/></svg></span><h3>คลังน้ำมัน</h3><p>รายงานสด + ต้นทุน FIFO รายวัน</p><div class="tag" style="color:var(--green);margin-top:10px">● เสร็จ/ต่อยอด</div></div>
+      <div class="card"><span class="badge b-lg bg-gold" style="margin-bottom:12px"><svg class="ico"><use href="#i-food"/></svg></span><h3>คลังโรงครัว</h3><p>ตัดสต็อกสด ต้นทุนต่อหัว/วัน</p><div class="tag" style="color:var(--green);margin-top:10px">● ออกแบบแล้ว</div></div>
+    </div>
+    <div style="text-align:center;color:var(--muted);font-weight:600;font-size:13px;margin:6px 0 12px">ทั้งหมดไหลลงสู่ ↓</div>
+    <div class="card dark hatch"><div class="row" style="position:relative;z-index:1;align-items:center">
+      <span class="badge b-lg bg-dark"><svg class="ico"><use href="#i-doc"/></svg></span>
+      <div><h3 style="margin:0">บัญชี — งบต้นทุน &amp; P&amp;L</h3>
+      <p style="margin-top:4px">ปลายทางที่รวมทุกข้อมูล → แตกต้นทุนตามงาน/รถ → เทียบรายได้ → วัดประสิทธิภาพต่อ ตัน/BCM</p></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- BRIDGE -->
+<section id="bridge">
+  <div class="wrap">
+    <div class="shead"><div class="snum">04</div><div><h2>งบสะพาน: ออกงบเร็วระหว่างรอระบบ</h2><p>ยอมรับว่าผิดหลักการ (ยังไม่ดึงจากระบบทั้งหมด) แต่แลกกับความเร็วเพื่อให้บริหารไม่สะดุด</p></div></div>
+    <div class="grid g4" style="margin-bottom:14px">
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:6px"><span class="badge b-sm bg-steel"><svg class="ico"><use href="#i-db"/></svg></span><b style="color:var(--navy)">TRCloud (ลาว)</b></div><p class="muted">อะไหล่/รายการย่อย · 2 ห้อง TDL &amp; MVDC · TDL</p></div>
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:6px"><span class="badge b-sm bg-steel"><svg class="ico"><use href="#i-server"/></svg></span><b style="color:var(--navy)">SAP (ไทย)</b></div><p class="muted">เงินเดือนคนไทย + อะไหล่ซื้อจากฝั่งไทย</p></div>
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:6px"><span class="badge b-sm bg-steel"><svg class="ico"><use href="#i-gas"/></svg></span><b style="color:var(--navy)">น้ำมัน FIFO</b></div><p class="muted">ข้อมูลรับเข้าหน้างาน · ตีราคา MWA รายวัน</p></div>
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:6px"><span class="badge b-sm bg-steel"><svg class="ico"><use href="#i-chart"/></svg></span><b style="color:var(--navy)">JV Summary</b></div><p class="muted">รายได้ + Back Charge จาก LXML (Sheet/Email)</p></div>
+    </div>
+    <div style="text-align:center;color:var(--gold-d);font-weight:700;font-size:13.5px;margin:4px 0 16px">รวม → งบสะพาน (P&amp;L)</div>
+    <div class="grid g2">
+      <div class="card gold"><div class="row" style="align-items:center"><span class="badge b-md" style="background:#fff;color:var(--gold-d)"><svg class="ico"><use href="#i-clock"/></svg></span><div><h3 style="margin:0">ออกได้ช้าสุด วันที่ 10 ของเดือนถัดไป</h3><p style="margin-top:6px">เห็นภาพต้นทุนเทียบรายได้ได้ทุกเดือน ใช้ monitoring หน้างานได้ทันสถานการณ์</p></div></div></div>
+      <div class="card dark"><div class="row" style="align-items:flex-start"><span class="badge b-md bg-dark"><svg class="ico"><use href="#i-tri"/></svg></span><div><h3 style="margin:0">ยังไม่สมบูรณ์ 100% — บางส่วนเป็น Estimation</h3>
+        <div style="margin-top:8px">
+          <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span>OT ได้หลังวันที่ 15 — ไม่ทันรอบส่ง</span></div>
+          <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span>ค่าใช้จ่ายบางส่วนสรุปจริง วันที่ 10–15</span></div>
+          <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span>ใช้ run-rate/ประมาณการที่ใกล้เคียงพอบริหาร</span></div>
+        </div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PURCHASE -->
+<section id="purchase" class="alt">
+  <div class="wrap">
+    <div class="shead"><div class="snum">05</div><div><h2>งานที่ 1 — จัดซื้อ: ติดตามงาน กันออเดอร์หลุด</h2><p>ยังไม่แตะ flow งาน แค่ทำให้ปัญหาเบาลงด้วยข้อมูลที่ถูกต้องขึ้น</p></div></div>
+    <div class="grid" style="grid-template-columns:5fr 7fr">
+      <div class="card dark hatch"><div style="position:relative;z-index:1">
+        <div class="row" style="align-items:center;margin-bottom:14px"><span class="badge b-md bg-dark"><svg class="ico"><use href="#i-tri"/></svg></span><span class="tag accent">ปัญหา: งานพอกหางหมู</span></div>
+        <div class="stat" style="color:#fff">10 <span class="muted">→</span> 20 <span class="muted">→</span> <span class="accent">30+</span></div>
+        <p style="margin-top:12px">PR เข้าช่วงพีค &gt;10/วัน ทำเสร็จยังต้องตามจ่ายต่อ แต่ติดสภาพคล่อง งานเลยสะสม</p>
+        <p style="margin-top:14px;padding-top:14px;border-top:1px solid #2a4258"><b class="accent">ผลกระทบ:</b> หลายรายการที่ต้องซื้อถูกลืม/หลุด กระทบหน้างาน — เรื้อรังแม้เปลี่ยน/เพิ่มคนแล้ว</p>
+      </div></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="row"><span class="badge b-md bg-steel"><svg class="ico"><use href="#i-sync"/></svg></span><div><h3>เว็บติดตามงานจัดซื้อ <span class="mono" style="font-size:13px;color:var(--muted)">(pr-warehouse)</span></h3><p><b>เลิกกรอก Google Sheet มือ</b> → ดึงจาก TRCloud โดยตรงด้วย web scraping ลิงก์ real-time กับฐานข้อมูลบริษัท ลดขั้นตอน + ข้อมูลถูกต้องขึ้น (เป็นเอกสารที่ผ่านหัวหน้าตรวจแล้ว)</p></div></div></div>
+        <div class="card gold">
+          <h3 style="margin-bottom:14px">จุดเด่น: ปรับฟีเจอร์ตามหน้างานได้ภายในวัน <span class="accent">(&lt; 15 นาที)</span></h3>
+          <div class="grid g4" style="gap:10px">
+            <div class="pill" style="justify-content:center;flex-direction:column;gap:6px;padding:14px 8px"><svg class="ico" style="color:var(--gold-d)"><use href="#i-code"/></svg><b>GitHub</b><span class="muted" style="font-size:10.5px">วางโค้ด</span></div>
+            <div class="pill" style="justify-content:center;flex-direction:column;gap:6px;padding:14px 8px"><svg class="ico" style="color:var(--gold-d)"><use href="#i-server"/></svg><b>VS Code</b><span class="muted" style="font-size:10.5px">เขียน/แก้</span></div>
+            <div class="pill" style="justify-content:center;flex-direction:column;gap:6px;padding:14px 8px"><svg class="ico" style="color:var(--gold-d)"><use href="#i-bolt"/></svg><b>AI / Claude</b><span class="muted" style="font-size:10.5px">แก้ด้วย prompt</span></div>
+            <div class="pill" style="justify-content:center;flex-direction:column;gap:6px;padding:14px 8px"><svg class="ico" style="color:var(--gold-d)"><use href="#i-check"/></svg><b>ใช้งานจริง</b><span class="muted" style="font-size:10.5px">deploy ทันที</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FUEL -->
+<section id="fuel">
+  <div class="wrap">
+    <div class="shead"><div class="snum">06</div><div><h2>งานที่ 2 — คลังน้ำมัน: รายงานสด + ต้นทุนรายวัน</h2><p>ยุบหลายชีทเป็นชีทเดียว ลิงก์จาก MES → แสดงสถานะใกล้ real-time</p></div></div>
+    <div class="grid g2">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="row"><span class="badge b-md bg-steel"><svg class="ico"><use href="#i-chart"/></svg></span><div><h3>เว็บรายงานน้ำมัน <span class="mono" style="font-size:13px;color:var(--muted)">(Fuel2)</span></h3><p>เดิมทีมน้ำมันกรอกหลายชีทเพื่อรายงานรายวัน + ประชุม weekly → ยุบเป็นชีทเดียว ดึงจาก MES ตรง เป็นข้อมูลตัวเดียวกับงบสะพาน</p></div></div></div>
+        <div class="card gold"><div class="row"><span class="badge b-md" style="background:#fff;color:var(--gold-d)"><svg class="ico"><use href="#i-gas"/></svg></span><div><h3>ต้นทุนน้ำมัน FIFO (MWA)</h3><p>ตีราคาน้ำมันที่เบิกแบบ moving-weighted-average ระบุต้นทุนจริงระดับรายวัน — กลั่นเป็น skill ใช้ซ้ำได้ทุกเดือน</p></div></div></div>
+      </div>
+      <div class="card dark hatch"><div style="position:relative;z-index:1">
+        <span class="tag accent">แผนแอปแสกนจ่ายน้ำมัน — ลดจุดแสกน</span>
+        <p style="margin-top:8px">ปัจจุบัน 4 จุด: หัวจ่าย · คนจ่าย · รถ · คน (พนักงานลืมพกบัตร = เติมไม่ได้ → ถอยไปเขียนมือ)</p>
+        <div class="row" style="align-items:center;gap:18px;margin:16px 0">
+          <div class="stat" style="font-size:50px"><span class="muted">4</span> → <span class="accent">2</span></div>
+          <div style="font-weight:700;color:#fff;font-size:16px">เหลือแค่ หัวจ่าย + รถ</div>
+        </div>
+        <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span><b>คนจ่าย</b> — จาก login (แอป offline → push เมื่อมีเน็ต)</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span><b>คนขับ</b> — จากแถบแม่เหล็ก/GPS ที่ใช้สตาร์ทรถ (ชั่วคราวแสกนบัตร LXML)</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span><b>ไม่มีบัตร</b> — เติมได้ก่อน ไม่บล็อก production — บันทึกไว้จัดการทีหลัง</span></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STORE -->
+<section id="store" class="alt">
+  <div class="wrap">
+    <div class="shead"><div class="snum">07</div><div><h2>งานที่ 3 — คลังพัสดุ: หัวใจของต้นทุน</h2><p>ดันของให้ผ่านคลัง 100% เพื่อผูกการเบิกเข้ากับรถที่ซ่อมจริง → ต้นทุนต่อ BCM</p></div></div>
+    <div class="grid" style="grid-template-columns:4fr 8fr">
+      <div class="card dark hatch"><div style="position:relative;z-index:1">
+        <span class="badge b-md bg-dark" style="margin-bottom:16px"><svg class="ico"><use href="#i-box"/></svg></span>
+        <span class="tag accent">ปัญหา</span>
+        <p style="font-size:21px;font-weight:700;color:#fff;margin:6px 0 12px">ยอดซื้อ ≠ ยอดเบิก</p>
+        <p>ของส่วนใหญ่ไม่ผ่านคลัง — ซื้อแล้วเข้าหน้างานเลย หรือเขียนใบเบิกแต่ไม่ลงข้อมูล จึงไม่รู้ว่าใช้จริงเมื่อไหร่ กับรถคันไหน</p>
+      </div></div>
+      <div class="grid g2">
+        <div class="card"><div class="row"><span class="badge b-sm bg-gold"><svg class="ico"><use href="#i-link"/></svg></span><div><h3>ผูก Work Order</h3><p>ทุกการเบิกผูก รถ + cost center + กิจกรรม (air code ฝังในฐานข้อมูล)</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-sm bg-gold"><svg class="ico"><use href="#i-chart"/></svg></span><div><h3>ต้นทุนต่อรถ/งาน</h3><p>DB function สรุปต้นทุน ABC รายรถ + ราย cost center อัตโนมัติ</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-sm bg-gold"><svg class="ico"><use href="#i-shield"/></svg></span><div><h3>Handshake 2 ฝั่ง</h3><p>แสกนยืนยันคนเบิก–คนจ่าย · ระบบจับยืนยันข้างเดียวทุกชั่วโมง</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-sm bg-gold"><svg class="ico"><use href="#i-tri"/></svg></span><div><h3>Soft-block</h3><p>ของด่วนเบิกผ่านได้ ไม่บล็อก production แต่ติดธงไว้ตรวจ</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-sm bg-gold"><svg class="ico"><use href="#i-sync"/></svg></span><div><h3>Offline-first</h3><p>บันทึก SQLite ในเครื่อง → sync ขึ้น cloud เมื่อมีเน็ต (เน็ตหน้างานแย่)</p></div></div></div>
+        <div class="card"><div class="row"><span class="badge b-sm bg-gold"><svg class="ico"><use href="#i-search"/></svg></span><div><h3>Cycle count</h3><p>กระทบยอดช่องว่างซื้อ–เบิก ระบุเหตุ เช่น เบิกไม่ลงบันทึก</p></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="arch">
+  <div class="wrap">
+    <div class="shead"><div class="snum">08</div><div><h2>สถาปัตยกรรมคลัง: Offline-first → Cloud → ERP</h2><p>หน้างานไม่มีวันสะดุดเพราะเน็ต — ข้อมูลพักในเครื่องก่อน แล้วค่อย sync</p></div></div>
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-steel" style="margin:0 auto 12px"><svg class="ico"><use href="#i-mobile"/></svg></span><h3>อุปกรณ์หน้างาน</h3><p class="muted">Tablet/Mobile (Expo) · กรอก/เลือก/ถ่ายรูป/แสกน</p></div>
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-gold" style="margin:0 auto 12px"><svg class="ico"><use href="#i-db"/></svg></span><h3>เก็บในเครื่อง</h3><p class="muted">SQLite + sync queue · status: pending (ออฟไลน์)</p></div>
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-steel" style="margin:0 auto 12px"><svg class="ico"><use href="#i-cloud"/></svg></span><h3>ฐานข้อมูลกลาง</h3><p class="muted">Google Cloud · PostgreSQL + realtime</p></div>
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-gold" style="margin:0 auto 12px"><svg class="ico"><use href="#i-server"/></svg></span><h3>TRCloud ERP</h3><p class="muted">POST รับเข้า (GR) / จ่ายออก (GI) · เอกสาร + สต็อก</p></div>
+    </div>
+    <div class="card dark hatch"><div class="row" style="position:relative;z-index:1;align-items:center">
+      <span class="badge b-md bg-dark"><svg class="ico"><use href="#i-sync"/></svg></span>
+      <div><h3 style="margin:0" class="accent">Sync เช็คสองทาง (two-way)</h3>
+      <p style="margin-top:6px">เทียบข้อมูลทั้งสองฝั่ง ถ้าไม่ตรง เติมส่วนที่หายไป · ใช้ <b style="color:#fff">offline_id เป็น idempotency key</b> กันบันทึกซ้ำ · ข้อมูลแบบ change-on-edit · ตัดสต็อกแสดงผลบนเว็บ/แอปแบบ real-time</p></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- KITCHEN -->
+<section id="kitchen" class="alt">
+  <div class="wrap">
+    <div class="shead"><div class="snum">09</div><div><h2>งานที่ 4 — คลังโรงครัว: ต้นทุนต่อหัว/วัน</h2><p>ไม่ลงลึกเท่าเหมือง/คลังพัสดุ — เน้นแสดงต้นทุน real-time ทันทีที่รับเข้า/เบิก</p></div></div>
+    <div class="grid g2">
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:6px"><span class="badge b-md bg-gold"><svg class="ico"><use href="#i-food"/></svg></span><h3 style="margin:0">ระบบทำงาน</h3></div>
+        <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span><b>รับเข้า</b> — ใช้ถ่ายรูปเป็นหลัก</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span><b>เบิก/ตัดออก</b> — ใช้แสกน → ตัดสต็อก real-time บนเว็บ</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-check"/></svg><span><b>ข้อมูล</b> — localStorage → cloud → ฐานบริษัท (sync 2 ทาง)</span></div>
+        <p style="margin-top:14px;font-style:italic;color:var(--steel);font-size:13px">หัวใจร่วมกับคลังพัสดุ: ตัด stock แบบ real-time บนเว็บ/แอป</p>
+      </div>
+      <div class="card dark"><h3 class="accent" style="margin-bottom:14px">โครงต้นทุนที่เก็บ</h3>
+        <div class="ladder">
+          <div class="step"><span class="badge"><svg class="ico"><use href="#i-food"/></svg></span><div><div class="t">เมนู</div><div class="d">อาหารแต่ละมื้อ</div></div></div>
+          <div class="arr"><svg class="ico"><use href="#i-arrow"/></svg></div>
+          <div class="step"><span class="badge"><svg class="ico"><use href="#i-box"/></svg></span><div><div class="t">วัตถุดิบ</div><div class="d">ของที่ใช้ในเมนูนั้น</div></div></div>
+          <div class="arr"><svg class="ico"><use href="#i-arrow"/></svg></div>
+          <div class="step"><span class="badge"><svg class="ico"><use href="#i-chart"/></svg></span><div><div class="t">ต้นทุนรวมรอบเบิก</div><div class="d">มูลค่าทั้งหมดที่เบิกใช้</div></div></div>
+          <div class="arr"><svg class="ico"><use href="#i-arrow"/></svg></div>
+          <div class="step last"><span class="badge"><svg class="ico"><use href="#i-users"/></svg></span><div><div class="t">ต้นทุนต่อหัว/วัน</div><div class="d">÷ จำนวนพนักงานที่ทำงานวันนั้น</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section id="tools">
+  <div class="wrap">
+    <div class="shead"><div class="snum">10</div><div><h2>เครื่องมือ &amp; วิธีทำงาน</h2><p>TRCloud เป็นแกนข้อมูลกลาง — ดึงครั้งเดียว ป้อนได้ทั้งงบสะพานและทุกแอป</p></div></div>
+    <div class="grid g4" style="margin-bottom:18px">
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-steel" style="margin:0 auto 12px"><svg class="ico"><use href="#i-server"/></svg></span><h3>TRCloud</h3><p class="muted">ระบบ ERP ต้นทาง</p></div>
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-steel" style="margin:0 auto 12px"><svg class="ico"><use href="#i-code"/></svg></span><h3>Python Extractor</h3><p class="muted">ดึง PO/AP/IV → Excel + JSON</p></div>
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-steel" style="margin:0 auto 12px"><svg class="ico"><use href="#i-cloud"/></svg></span><h3>ฐานข้อมูลกลาง</h3><p class="muted">Google Cloud (PostgreSQL)</p></div>
+      <div class="card" style="text-align:center"><span class="badge b-lg bg-steel" style="margin:0 auto 12px"><svg class="ico"><use href="#i-layers"/></svg></span><h3>เว็บ / แอป / งบ</h3><p class="muted">คลัง · น้ำมัน · จัดซื้อ · P&amp;L</p></div>
+    </div>
+    <div class="grid" style="grid-template-columns:7fr 5fr">
+      <div class="card">
+        <span class="tag muted" style="display:block;margin-bottom:12px">ชุดเครื่องมือ</span>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <span class="pill">Cowork + AI (Claude)</span><span class="pill">TRCloud API</span><span class="pill">Python / pandas</span>
+          <span class="pill">Google Cloud</span><span class="pill">Next.js</span><span class="pill">Expo / React Native</span>
+          <span class="pill">NestJS</span><span class="pill">GitHub</span><span class="pill">VS Code</span>
+        </div>
+      </div>
+      <div class="card dark"><div class="row"><span class="badge b-md bg-dark"><svg class="ico"><use href="#i-bolt"/></svg></span><div><h3 class="accent" style="margin:0">ปรับได้เร็วระดับวัน</h3><p style="margin-top:6px">โค้ดเขียนเอง + AI ช่วยแก้ตาม prompt → ปรับฟีเจอร์ตามหน้างานได้ทันใจ ต่างจากระบบ IT ทั่วไปที่ใช้สัปดาห์/เดือน</p></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="road" class="alt">
+  <div class="wrap">
+    <div class="shead"><div class="snum">11</div><div><h2>สถานะ &amp; ก้าวต่อไป</h2></div></div>
+    <div class="grid g2">
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:8px"><span class="badge b-md bg-green"><svg class="ico"><use href="#i-check"/></svg></span><h3 style="margin:0;color:var(--green)">ทำแล้ว</h3></div>
+        <div class="li"><svg class="ico dot green"><use href="#i-check"/></svg><span>งบสะพาน (P&amp;L) ออกได้ทุกเดือน</span></div>
+        <div class="li"><svg class="ico dot green"><use href="#i-check"/></svg><span>จัดซื้อ — เว็บติดตามงาน pr-warehouse</span></div>
+        <div class="li"><svg class="ico dot green"><use href="#i-check"/></svg><span>คลังน้ำมัน — เว็บรายงาน + ต้นทุน FIFO (skill)</span></div>
+        <div class="li"><svg class="ico dot green"><use href="#i-check"/></svg><span>คลังพัสดุ — แอป offline-first สร้างจริง (schema + DB function)</span></div>
+        <div class="li"><svg class="ico dot green"><use href="#i-check"/></svg><span>คลังโรงครัว — ออกแบบระบบ + โครงต้นทุน</span></div>
+      </div>
+      <div class="card"><div class="row" style="align-items:center;margin-bottom:8px"><span class="badge b-md bg-gold"><svg class="ico"><use href="#i-arrow"/></svg></span><h3 style="margin:0;color:var(--gold-d)">ก้าวต่อไป</h3></div>
+        <div class="li"><svg class="ico dot"><use href="#i-arrow"/></svg><span>นำแอปคลังพัสดุขึ้นใช้จริง — ของผ่านคลัง 100%</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-arrow"/></svg><span>แอปแสกนจ่ายน้ำมัน (ลด 4→2 จุด) + GPS รถ</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-arrow"/></svg><span>คลังโรงครัว — ตัดสต็อก + ต้นทุนต่อหัวสด</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-arrow"/></svg><span>เชื่อมทุกคลังเข้างบต้นทุน → ต้นทุนต่อ BCM real-time</span></div>
+        <div class="li"><svg class="ico dot"><use href="#i-arrow"/></svg><span>ลดการพึ่ง Estimation ในงบสะพานทีละส่วน</span></div>
+      </div>
+    </div>
+    <div class="card dark hatch" style="margin-top:18px"><div class="row" style="position:relative;z-index:1;align-items:center">
+      <span class="badge b-md bg-dark"><svg class="ico"><use href="#i-gem"/></svg></span>
+      <p style="font-size:16px"><b class="accent">ปลายทาง:</b> <span style="color:#fff">ข้อมูลหน้างานเป็น digital ครบวงจร → ต้นทุนที่ถูกต้อง เร็ว และวิเคราะห์หาสาเหตุได้ใกล้ real-time</span></p>
+    </div></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>โครงการปฏิรูประบบข้อมูลหน้างาน · เหมืองทองเซโปน (LXML) · จัดทำโดย NB — หัวหน้าบัญชี · มิถุนายน 2026</div>
+    <div class="ftags">
+      <span class="ftag">TRCloud</span><span class="ftag">SAP</span><span class="ftag">Python</span>
+      <span class="ftag">Google Cloud</span><span class="ftag">Next.js</span><span class="ftag">Expo</span><span class="ftag">NestJS</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
