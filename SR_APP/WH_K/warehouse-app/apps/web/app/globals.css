@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: var(--font-thai), 'Noto Sans Thai', sans-serif;
+}
+
+body {
+  background: #f6f6f8;
+  color: #1c1c22;
+  -webkit-font-smoothing: antialiased;
+}

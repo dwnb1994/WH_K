@@ -1,0 +1,27 @@
+{
+  "date": "2026-06-25",
+  "issue_date": "2026-06-25",
+  "status": "draft",
+  "stage": "1",
+  "request_by": "ผู้เบิกตัวอย่าง",
+  "purpose": "เบิกใช้งานหน้างาน",
+  "description": "",
+  "department": "โครงการเซโปน-แท่งคำและนาลู",
+  "project": "TN-650_งานสำนักงานหน้างาน",
+  "warehouse": "TN_คลังโรงครัวเซโปน",
+  "staff": "",
+  "client_name": "",
+  "client_telephone": "",
+  "lines": [
+    {
+      "product_id": "C-GN-CK-93005",
+      "product": "ตัวอย่างสินค้า",
+      "quantity": 5,
+      "price": 1000,
+      "warehouse": "TN_คลังโรงครัวเซโปน",
+      "remark": "",
+      "serial": "",
+      "acc_code": ""
+    }
+  ]
+}

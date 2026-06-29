@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "MWM Warehouse",
+    "slug": "mwm-warehouse",
+    "version": "1.0.0",
+    "scheme": "mwm",
+    "platforms": ["ios", "android"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        { "cameraPermission": "แอปต้องการกล้องเพื่อสแกนบาร์โค้ดพัสดุ" }
+      ],
+      [
+        "expo-notifications",
+        { "icon": "./assets/notification-icon.png" }
+      ]
+    ],
+    "android": {
+      "package": "com.yourcompany.mwmwarehouse",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.yourcompany.mwmwarehouse",
+      "supportsTablet": true
+    }
+  }
+}

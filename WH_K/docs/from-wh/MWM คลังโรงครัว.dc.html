@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  body { margin:0; background:#F8FAFC; font-family:'Noto Sans Thai',sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  ::-webkit-scrollbar { width:7px; height:7px; }
+  ::-webkit-scrollbar-thumb { background:rgba(148,163,184,0.45); border-radius:9999px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  @keyframes mwmToast { from { opacity:0; transform:translate(-50%,16px); } to { opacity:1; transform:translate(-50%,0); } }
+  @keyframes mwmFade { from { opacity:0; } to { opacity:1; } }
+  @keyframes mwmPop { from { opacity:0; transform:scale(.96) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes mwmSpin { to { transform:rotate(360deg); } }
+</style>
+</helmet>
+
+<div style="height:100vh;display:flex;font-family:'Noto Sans Thai',sans-serif;color:#0F172A;overflow:hidden;">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside style="width:240px;flex:0 0 240px;background:#fff;border-right:1px solid #E2E8F0;display:flex;flex-direction:column;">
+    <div style="padding:16px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px;">
+      <span style="background:rgba(59,130,246,0.18);width:48px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-warehouse" style="font-size:24px;color:#2563EB;"></i></span>
+      <div>
+        <div style="font-size:15px;font-weight:700;">MWM System</div>
+        <div style="font-size:10px;color:#94A3B8;">Mine Warehouse Management</div>
+      </div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#94A3B8;padding:0 8px;margin-bottom:4px;">ภาพรวม</div>
+        <button onClick="{{ goRoi }}" style="{{ navRStyle }}"><i class="fa-solid fa-gauge-high" style="width:16px;text-align:center;"></i>แดชบอร์ดต้นทุน</button>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#94A3B8;padding:0 8px;margin-bottom:4px;">คลังโรงครัวสินค้า</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <button onClick="{{ goItems }}" style="{{ navItems }}"><i class="fa-solid fa-boxes-stacked" style="width:16px;text-align:center;"></i>รายการสินค้า</button>
+          <button onClick="{{ goCycle }}" style="{{ navCStyle }}"><i class="fa-solid fa-clipboard-check" style="width:16px;text-align:center;"></i>ตรวจนับสต็อก</button>
+          <button onClick="{{ goReceive }}" style="{{ navReceive }}"><i class="fa-solid fa-file-import" style="width:16px;text-align:center;"></i>รับเข้า / นำเข้า</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#94A3B8;padding:0 8px;margin-bottom:4px;">การเบิกจ่าย</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <button onClick="{{ goWithdraw }}" style="{{ navWStyle }}"><i class="fa-solid fa-arrow-up-from-bracket" style="width:16px;text-align:center;"></i>เบิกสินค้า</button>
+          <button onClick="{{ goHistory }}" style="{{ navHistory }}"><i class="fa-solid fa-clock-rotate-left" style="width:16px;text-align:center;"></i>ประวัติการเบิก</button>
+          <button onClick="{{ goReturns }}" style="{{ navReturns }}"><i class="fa-solid fa-arrow-rotate-left" style="width:16px;text-align:center;"></i>การส่งคืน</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#94A3B8;padding:0 8px;margin-bottom:4px;">ระบบ</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <button onClick="{{ goEmp }}" style="{{ navEmp }}"><i class="fa-solid fa-users" style="width:16px;text-align:center;"></i>พนักงาน</button>
+          <button onClick="{{ goLogs }}" style="{{ navLogs }}"><i class="fa-solid fa-file-lines" style="width:16px;text-align:center;"></i>บันทึกการใช้งาน</button>
+        </div>
+      </div>
+    </nav>
+    <div style="padding:12px 16px;border-top:1px solid #E2E8F0;text-align:center;font-size:11px;color:#94A3B8;">Powered by DMIS</div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+
+    <!-- TOOLBAR -->
+    <header style="height:58px;flex:0 0 58px;background:#fff;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <i class="fa-solid fa-bars" style="color:#94A3B8;font-size:16px;"></i>
+        <div style="font-size:14px;color:#475569;"><span style="color:#94A3B8;">คลังโรงครัวสนับสนุนเหมือง–ก่อสร้าง</span> <span style="margin:0 6px;color:#CBD5E1;">/</span> <b style="color:#0F172A;">{{ crumb }}</b></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <!-- SYNC CHIP (P6) -->
+        <button onClick="{{ onSync }}" style="{{ syncChipStyle }}">
+          <sc-if value="{{ syncing }}" hint-placeholder-val="{{ false }}"><i class="fa-solid fa-arrows-rotate" style="font-size:12px;animation:mwmSpin .8s linear infinite;"></i></sc-if>
+          <sc-if value="{{ syncIdle }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ syncDotColor }};display:inline-block;"></span></sc-if>
+          <span>{{ syncLabel }}</span>
+        </button>
+        <span style="width:1px;height:24px;background:#E2E8F0;"></span>
+        <i class="fa-regular fa-bell" style="color:#475569;font-size:16px;"></i>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">ส</div>
+          <div style="line-height:1.2;"><div style="font-size:12px;font-weight:600;">ช่างสมชาย</div><div style="font-size:10px;color:#94A3B8;">เจ้าหน้าที่คลังโรงครัว A</div></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main style="flex:1;overflow-y:auto;padding:22px;">
+
+      <!-- ============ WITHDRAW VIEW ============ -->
+      <sc-if value="{{ isWithdraw }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <!-- header -->
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px;">
+          <div>
+            <h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-arrow-up-from-bracket" style="color:#2563EB;margin-right:8px;"></i>เบิกสินค้า</h1>
+            <p style="font-size:13px;color:#475569;margin:4px 0 0;">ทุกการเบิกผูกกับใบสั่งซ่อมและ Cost Center พร้อมยืนยันตัวตน 2 ฝ่าย</p>
+          </div>
+          <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+            <button onClick="{{ goWithdraw }}" style="{{ tW }}">เบิกสินค้า</button>
+            <button onClick="{{ goCycle }}" style="{{ tC }}">ตรวจนับ</button>
+            <button onClick="{{ goRoi }}" style="{{ tR }}">แดชบอร์ดต้นทุน</button>
+          </div>
+        </div>
+
+        <!-- WO binding bar (P1) -->
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <span style="width:38px;height:38px;border-radius:9px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-screwdriver-wrench" style="color:#2563EB;font-size:15px;"></i></span>
+              <div><div style="font-size:11px;color:#94A3B8;">ใบสั่งซ่อม (WO)</div><div style="font-size:15px;font-weight:700;">WO-2025-0481</div></div>
+            </div>
+            <span style="width:1px;height:34px;background:#E2E8F0;"></span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:5px 10px;"><span style="color:#94A3B8;">หน่วยงาน:</span> เหมืองเหนือ</span>
+              <span style="font-size:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:5px 10px;"><span style="color:#94A3B8;">โครงการ:</span> PIT-A ขยายบ่อ</span>
+              <span style="font-size:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:5px 10px;"><span style="color:#94A3B8;">กิจกรรม:</span> ซ่อมบำรุง</span>
+              <span style="font-size:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:5px 10px;"><span style="color:#94A3B8;">เครื่องจักร:</span> รถขุด DZ06</span>
+            </div>
+          </div>
+          <button style="font-size:12px;font-weight:600;color:#2563EB;background:#EFF6FF;border:1px solid #BFD3FB;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;">เปลี่ยน WO</button>
+        </div>
+
+        <!-- two columns -->
+        <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start;">
+
+          <!-- LEFT: catalog -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-size:15px;font-weight:700;">เลือกพัสดุ</div>
+              <span style="font-size:11px;color:#94A3B8;">2 คลังโรงครัว · ราคาทุนล็อก ณ วันเบิก</span>
+            </div>
+            <div style="position:relative;margin-bottom:12px;">
+              <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94A3B8;font-size:12px;"></i>
+              <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="ค้นหารหัส / ชื่อพัสดุ หรือสแกนบาร์โค้ด" style="width:100%;padding:9px 12px 9px 34px;border:1px solid #E2E8F0;border-radius:9px;font-size:13px;font-family:inherit;color:#0F172A;outline:none;background:#F8FAFC;" />
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;max-height:430px;overflow-y:auto;">
+              <sc-for list="{{ catalogView }}" as="it" hint-placeholder-count="5">
+                <div style="border:1px solid #E2E8F0;border-radius:10px;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                  <div style="min-width:0;">
+                    <div style="font-size:13px;font-weight:600;">{{ it.name }}</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">
+                      <span style="font-size:11px;color:#94A3B8;">{{ it.code }}</span>
+                      <span style="font-size:11px;color:#2563EB;background:#EFF6FF;border-radius:6px;padding:1px 7px;"><i class="fa-solid fa-lock" style="font-size:9px;margin-right:3px;"></i>ทุน {{ it.costFmt }}/{{ it.unit }}</span>
+                      <span style="font-size:11px;color:{{ it.stockColor }};">{{ it.stockLabel }}</span>
+                    </div>
+                  </div>
+                  <button onClick="{{ it.onAdd }}" style="{{ it.addStyle }}"><i class="fa-solid {{ it.addIcon }}" style="font-size:11px;margin-right:5px;"></i>{{ it.addLabel }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- RIGHT: cart -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-size:15px;font-weight:700;">รายการเบิก</div>
+              <span style="font-size:12px;font-weight:600;color:#475569;background:#F1F5F9;border-radius:999px;padding:3px 11px;">{{ cartCount }} รายการ</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;min-height:120px;">
+              <sc-for list="{{ cartView }}" as="c" hint-placeholder-count="2">
+                <div style="{{ c.rowStyle }}">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+                    <div style="min-width:0;">
+                      <div style="font-size:13px;font-weight:600;">{{ c.name }}</div>
+                      <div style="font-size:11px;color:#94A3B8;margin-top:2px;">{{ c.code }} · คลังโรงครัว {{ c.wh }} · ทุน {{ c.costFmt }}</div>
+                    </div>
+                    <button onClick="{{ c.onRemove }}" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:13px;padding:2px;"><i class="fa-solid fa-xmark"></i></button>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px;">
+                    <div style="display:flex;align-items:center;gap:0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+                      <button onClick="{{ c.onDec }}" style="width:30px;height:30px;border:none;background:#F8FAFC;cursor:pointer;color:#475569;font-size:14px;font-family:inherit;">−</button>
+                      <span style="width:38px;text-align:center;font-size:13px;font-weight:600;">{{ c.qty }}</span>
+                      <button onClick="{{ c.onInc }}" style="width:30px;height:30px;border:none;background:#F8FAFC;cursor:pointer;color:#475569;font-size:14px;font-family:inherit;">+</button>
+                    </div>
+                    <div style="font-size:14px;font-weight:700;">{{ c.lineFmt }}</div>
+                  </div>
+                  <sc-if value="{{ c.need }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:9px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:8px 10px;">
+                      <div style="font-size:11px;color:#B45309;font-weight:600;margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:5px;"></i>เกินยอดคลังโรงครัว {{ c.wh }} (เหลือ {{ c.stock }}) — ระบุเหตุผลเพื่อเบิกแบบ Soft Block</div>
+                      <select value="{{ c.reason }}" onChange="{{ c.onReason }}" style="width:100%;padding:6px 9px;border:1px solid #FDE68A;border-radius:7px;font-size:12px;font-family:inherit;background:#fff;color:#0F172A;outline:none;">
+                        <option value="">เลือกเหตุผล…</option>
+                        <option value="cross">เบิกข้ามคลังโรงครัว (ของคลังโรงครัวอื่นมาส่ง)</option>
+                        <option value="urgent">งานฉุกเฉินหน้างาน หยุดเครื่องไม่ได้</option>
+                        <option value="intransit">มีของกำลังโอนเข้าคลังโรงครัว</option>
+                      </select>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="text-align:center;color:#94A3B8;font-size:13px;padding:30px 0;"><i class="fa-solid fa-cart-flatbed" style="font-size:26px;display:block;margin-bottom:8px;opacity:.5;"></i>ยังไม่มีรายการ — เลือกพัสดุจากด้านซ้าย</div>
+              </sc-if>
+            </div>
+
+            <div style="border-top:1px dashed #E2E8F0;margin-top:14px;padding-top:14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div><div style="font-size:11px;color:#94A3B8;">มูลค่ารวม (Cost Snapshot)</div><div style="font-size:22px;font-weight:800;">{{ totalFmt }}</div></div>
+                <span style="font-size:11px;color:#2563EB;background:#EFF6FF;border-radius:8px;padding:6px 10px;"><i class="fa-solid fa-fingerprint" style="margin-right:5px;"></i>ต้องยืนยัน 2 ฝ่าย</span>
+              </div>
+              <button onClick="{{ onConfirm }}" style="{{ confirmStyle }}"><i class="fa-solid fa-arrow-right-arrow-left" style="margin-right:8px;"></i>ยืนยันการเบิก → Digital Handshake</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CYCLE COUNT VIEW ============ -->
+      <sc-if value="{{ isCycle }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px;">
+          <div>
+            <h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-clipboard-check" style="color:#2563EB;margin-right:8px;"></i>ตรวจนับสต็อก & Reconcile</h1>
+            <p style="font-size:13px;color:#475569;margin:4px 0 0;">รอบตรวจนับประจำ — ส่วนต่างทุกรายการต้องระบุเหตุผลก่อนปรับยอด</p>
+          </div>
+          <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+            <button onClick="{{ goWithdraw }}" style="{{ tW }}">เบิกสินค้า</button>
+            <button onClick="{{ goCycle }}" style="{{ tC }}">ตรวจนับ</button>
+            <button onClick="{{ goRoi }}" style="{{ tR }}">แดชบอร์ดต้นทุน</button>
+          </div>
+        </div>
+
+        <!-- session + summary -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px;">
+            <div style="font-size:12px;color:#94A3B8;">รอบตรวจนับ</div>
+            <div style="font-size:18px;font-weight:800;margin-top:2px;">#CC-0625</div>
+            <div style="font-size:11px;color:#D97706;margin-top:4px;">● กำลังตรวจ · คลังโรงครัว A+B</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px;">
+            <div style="font-size:12px;color:#94A3B8;">นับแล้ว</div>
+            <div style="font-size:18px;font-weight:800;margin-top:2px;">{{ cycleTotal }} / 40</div>
+            <div style="font-size:11px;color:#475569;margin-top:4px;">SKU ในรอบนี้</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px;">
+            <div style="font-size:12px;color:#94A3B8;">ตรงกับระบบ</div>
+            <div style="font-size:18px;font-weight:800;margin-top:2px;color:#16A34A;">{{ matched }} รายการ</div>
+            <div style="font-size:11px;color:#475569;margin-top:4px;">ไม่ต้องปรับ</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px;">
+            <div style="font-size:12px;color:#94A3B8;">มีส่วนต่าง</div>
+            <div style="font-size:18px;font-weight:800;margin-top:2px;color:#D97706;">{{ varCount }} รายการ</div>
+            <div style="font-size:11px;color:#475569;margin-top:4px;">ต้องระบุเหตุผล</div>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #E2E8F0;">
+            <div style="font-size:15px;font-weight:700;">ใบตรวจนับ</div>
+            <button style="font-size:12px;font-weight:600;color:#2563EB;background:#EFF6FF;border:1px solid #BFD3FB;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;"><i class="fa-solid fa-barcode" style="margin-right:6px;"></i>สแกนเพื่อนับ</button>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+                <th style="text-align:left;padding:10px 16px;font-weight:700;color:#475569;">พัสดุ</th>
+                <th style="text-align:center;padding:10px;font-weight:700;color:#475569;">คลังโรงครัว</th>
+                <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">ยอดระบบ</th>
+                <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">นับจริง</th>
+                <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">ส่วนต่าง</th>
+                <th style="text-align:left;padding:10px 16px;font-weight:700;color:#475569;width:230px;">เหตุผล (ถ้ามีส่วนต่าง)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ cycleView }}" as="r" hint-placeholder-count="5">
+                <tr style="{{ r.trStyle }}">
+                  <td style="padding:11px 16px;"><div style="font-weight:600;">{{ r.name }}</div><div style="font-size:11px;color:#94A3B8;">{{ r.code }}</div></td>
+                  <td style="text-align:center;padding:11px;color:#475569;">{{ r.wh }}</td>
+                  <td style="text-align:right;padding:11px;color:#475569;">{{ r.system }}</td>
+                  <td style="text-align:right;padding:11px;font-weight:600;">{{ r.counted }}</td>
+                  <td style="text-align:right;padding:11px;font-weight:700;color:{{ r.diffColor }};">{{ r.diffFmt }}</td>
+                  <td style="padding:11px 16px;">
+                    <sc-if value="{{ r.variance }}" hint-placeholder-val="{{ true }}">
+                      <select value="{{ r.reason }}" onChange="{{ r.onReason }}" style="{{ r.selStyle }}">
+                        <option value="">เลือกเหตุผล…</option>
+                        <option value="damaged">ชำรุด/เสียหาย</option>
+                        <option value="miscount">นับคลาดเคลื่อนรอบก่อน</option>
+                        <option value="lost">สูญหาย</option>
+                        <option value="unrecorded">เบิกไม่ลงระบบ</option>
+                      </select>
+                    </sc-if>
+                    <sc-if value="{{ r.matched }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size:12px;color:#16A34A;"><i class="fa-solid fa-check" style="margin-right:5px;"></i>ตรงกับระบบ</span>
+                    </sc-if>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-top:1px solid #E2E8F0;background:#F8FAFC;">
+            <div style="font-size:12px;color:#475569;"><i class="fa-solid fa-circle-info" style="color:#94A3B8;margin-right:6px;"></i>มูลค่าส่วนต่างรวมโดยประมาณ <b style="color:#D97706;">฿42,100</b></div>
+            <div style="display:flex;gap:10px;">
+              <button style="font-size:13px;font-weight:600;color:#475569;background:#fff;border:1px solid #E2E8F0;border-radius:9px;padding:9px 16px;cursor:pointer;font-family:inherit;">บันทึกร่าง</button>
+              <button onClick="{{ onReconcile }}" style="{{ reconcileStyle }}"><i class="fa-solid fa-scale-balanced" style="margin-right:7px;"></i>Reconcile & ปิดรอบ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ROI DASHBOARD VIEW ============ -->
+      <sc-if value="{{ isRoi }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px;">
+          <div>
+            <h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-chart-line" style="color:#2563EB;margin-right:8px;"></i>แดชบอร์ดต้นทุน</h1>
+            <p style="font-size:13px;color:#475569;margin:4px 0 0;">ข้อมูลเชิงธุรกิจสำหรับผู้บริหาร — Activity-Based Costing จาก Cost Snapshot ที่ล็อกแล้ว</p>
+          </div>
+          <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+            <button onClick="{{ goWithdraw }}" style="{{ tW }}">เบิกสินค้า</button>
+            <button onClick="{{ goCycle }}" style="{{ tC }}">ตรวจนับ</button>
+            <button onClick="{{ goRoi }}" style="{{ tR }}">แดชบอร์ดต้นทุน</button>
+          </div>
+        </div>
+
+        <!-- KPI -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+          <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid #2563EB;border-radius:12px;padding:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;font-weight:700;">ต้นทุนเบิกเดือนนี้</span><span style="width:28px;height:28px;border-radius:8px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-coins" style="font-size:12px;color:#2563EB;"></i></span></div>
+            <div style="font-size:28px;font-weight:800;line-height:1.1;margin-top:6px;">฿2.4M</div>
+            <div style="font-size:12px;color:#16A34A;margin-top:2px;"><i class="fa-solid fa-arrow-down" style="font-size:10px;"></i> 8% จากเดือนก่อน</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid #64748B;border-radius:12px;padding:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;font-weight:700;">มูลค่าสต็อก 2 คลังโรงครัว</span><span style="width:28px;height:28px;border-radius:8px;background:rgba(100,116,139,0.12);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-warehouse" style="font-size:12px;color:#64748B;"></i></span></div>
+            <div style="font-size:28px;font-weight:800;line-height:1.1;margin-top:6px;">฿18M</div>
+            <div style="font-size:12px;color:#475569;margin-top:2px;">A ฿11M · B ฿7M</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid #2563EB;border-radius:12px;padding:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;font-weight:700;">รอซิงค์</span><span style="width:28px;height:28px;border-radius:8px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-cloud-arrow-up" style="font-size:12px;color:#2563EB;"></i></span></div>
+            <div style="font-size:28px;font-weight:800;line-height:1.1;margin-top:6px;">{{ pending }}</div>
+            <div style="font-size:12px;color:#475569;margin-top:2px;">รายการออฟไลน์ · 6 อุปกรณ์</div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-left:4px solid #D97706;border-radius:12px;padding:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;font-weight:700;">ส่วนต่างตรวจนับ</span><span style="width:28px;height:28px;border-radius:8px;background:rgba(217,119,6,0.12);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-triangle-exclamation" style="font-size:12px;color:#D97706;"></i></span></div>
+            <div style="font-size:28px;font-weight:800;line-height:1.1;margin-top:6px;">฿42K</div>
+            <div style="font-size:12px;color:#475569;margin-top:2px;">9 รายการรอ Reconcile</div>
+          </div>
+        </div>
+
+        <!-- charts row -->
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px;">
+          <!-- ABC bar -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:2px;">ต้นทุนตามเครื่องจักร (ABC)</div>
+            <div style="font-size:12px;color:#94A3B8;margin-bottom:18px;">ค่าอะไหล่+ซ่อมบำรุงที่ผูก WO เดือนนี้</div>
+            <div style="display:flex;align-items:flex-end;gap:18px;height:170px;padding:0 6px;">
+              <sc-for list="{{ abc }}" as="b" hint-placeholder-count="5">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;">
+                  <div style="font-size:11px;font-weight:700;color:#475569;">{{ b.val }}</div>
+                  <div style="width:100%;border-radius:6px 6px 0 0;background:{{ b.color }};height:{{ b.h }};"></div>
+                  <div style="font-size:11px;color:#94A3B8;">{{ b.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <!-- exceptions / fraud -->
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:2px;">รายการผิดปกติ (Fraud Prevention)</div>
+            <div style="font-size:12px;color:#94A3B8;margin-bottom:14px;">ระบบจับได้จาก Handshake + Soft Block</div>
+            <div style="display:flex;flex-direction:column;gap:11px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #FDE68A;background:#FFFBEB;border-radius:9px;padding:10px 12px;"><span style="font-size:13px;color:#92400E;"><i class="fa-solid fa-arrows-turn-right" style="margin-right:8px;"></i>เบิกข้ามโครงการ</span><span style="font-size:13px;font-weight:700;color:#B45309;">4</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #FDE68A;background:#FFFBEB;border-radius:9px;padding:10px 12px;"><span style="font-size:13px;color:#92400E;"><i class="fa-solid fa-pen" style="margin-right:8px;"></i>ปรับยอดไม่มีเหตุผล</span><span style="font-size:13px;font-weight:700;color:#B45309;">2</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #FECACA;background:#FEF2F2;border-radius:9px;padding:10px 12px;"><span style="font-size:13px;color:#991B1B;"><i class="fa-solid fa-user-slash" style="margin-right:8px;"></i>Handshake ฝ่ายเดียว</span><span style="font-size:13px;font-weight:700;color:#DC2626;">1</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- project breakdown -->
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px;">สัดส่วนต้นทุนตามโครงการ (Cost Center)</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <sc-for list="{{ projects }}" as="p" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;"><span style="font-weight:600;">{{ p.name }}</span><span style="color:#475569;">{{ p.val }}</span></div>
+                <div style="height:10px;background:#F1F5F9;border-radius:6px;overflow:hidden;"><div style="height:100%;border-radius:6px;background:{{ p.color }};width:{{ p.w }};"></div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:12px;color:#2563EB;background:#EFF6FF;border-radius:8px;padding:9px 12px;"><i class="fa-solid fa-lock"></i>ทุกตัวเลขมาจาก Cost Snapshot ที่ล็อกราคา ณ วันเบิก — ปิดงบได้เร็วขึ้น ไม่ต้องเดาราคาย้อนหลัง</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ITEMS (STOCK MASTER 2 คลังโรงครัว) ============ -->
+      <sc-if value="{{ isItems }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="margin-bottom:18px;"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-boxes-stacked" style="color:#2563EB;margin-right:8px;"></i>รายการสินค้า</h1><p style="font-size:13px;color:#475569;margin:4px 0 0;">มูลค่าคงคลังโรงครัวแยกตาม 2 คลังโรงครัว · ราคาทุนล็อกตาม Cost Snapshot</p></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #E2E8F0;">
+            <div style="display:flex;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+              <span style="font-size:12px;font-weight:600;padding:6px 14px;background:#2563EB;color:#fff;">รวม 2 คลังโรงครัว</span>
+              <span style="font-size:12px;font-weight:600;padding:6px 14px;background:#fff;color:#475569;">คลังโรงครัว A</span>
+              <span style="font-size:12px;font-weight:600;padding:6px 14px;background:#fff;color:#475569;">คลังโรงครัว B</span>
+            </div>
+            <div style="position:relative;"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94A3B8;font-size:12px;"></i><input placeholder="ค้นหาพัสดุ…" style="padding:7px 12px 7px 32px;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-family:inherit;background:#F8FAFC;outline:none;width:200px;" /></div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+              <th style="text-align:left;padding:10px 16px;font-weight:700;color:#475569;">พัสดุ</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">คลังโรงครัว A</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">คลังโรงครัว B</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">รวม</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">ทุน/หน่วย</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">มูลค่า</th>
+              <th style="text-align:center;padding:10px 16px;font-weight:700;color:#475569;">สถานะ</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ stockView }}" as="it" hint-placeholder-count="6">
+                <tr style="border-bottom:1px solid #F1F5F9;">
+                  <td style="padding:11px 16px;"><div style="font-weight:600;">{{ it.name }}</div><div style="font-size:11px;color:#94A3B8;">{{ it.code }} · {{ it.unit }}</div></td>
+                  <td style="text-align:right;padding:11px;color:#475569;">{{ it.a }}</td>
+                  <td style="text-align:right;padding:11px;color:#475569;">{{ it.b }}</td>
+                  <td style="text-align:right;padding:11px;font-weight:700;">{{ it.total }}</td>
+                  <td style="text-align:right;padding:11px;color:#475569;">{{ it.costFmt }}</td>
+                  <td style="text-align:right;padding:11px;font-weight:600;">{{ it.valueFmt }}</td>
+                  <td style="text-align:center;padding:11px 16px;"><span style="font-size:12px;font-weight:600;padding:3px 11px;border-radius:999px;background:{{ it.statusBg }};color:{{ it.statusColor }};">{{ it.status }}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+          <div style="padding:12px 16px;border-top:1px solid #E2E8F0;background:#F8FAFC;font-size:12px;color:#475569;">มูลค่าสต็อกรวม 2 คลังโรงครัวโดยประมาณ <b>฿18.0M</b> · คลังโรงครัว A ฿11.0M · คลังโรงครัว B ฿7.0M</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ HISTORY ============ -->
+      <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="margin-bottom:18px;"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-clock-rotate-left" style="color:#2563EB;margin-right:8px;"></i>ประวัติการเบิก</h1><p style="font-size:13px;color:#475569;margin:4px 0 0;">ทุกรายการผูก WO + ยืนยัน 2 ฝ่าย + Timestamp · ตรวจสอบสถานะการซิงค์ได้</p></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+              <th style="text-align:left;padding:10px 16px;font-weight:700;color:#475569;">ใบสั่งซ่อม</th>
+              <th style="text-align:left;padding:10px;font-weight:700;color:#475569;">รายการ</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">มูลค่า</th>
+              <th style="text-align:left;padding:10px;font-weight:700;color:#475569;">ผู้เบิก</th>
+              <th style="text-align:center;padding:10px;font-weight:700;color:#475569;">ยืนยัน</th>
+              <th style="text-align:center;padding:10px;font-weight:700;color:#475569;">ซิงค์</th>
+              <th style="text-align:right;padding:10px 16px;font-weight:700;color:#475569;">เวลา</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ historyView }}" as="h" hint-placeholder-count="5">
+                <tr style="border-bottom:1px solid #F1F5F9;">
+                  <td style="padding:11px 16px;font-weight:600;color:#2563EB;">{{ h.wo }}</td>
+                  <td style="padding:11px;">{{ h.item }}</td>
+                  <td style="text-align:right;padding:11px;font-weight:600;">{{ h.val }}</td>
+                  <td style="padding:11px;color:#475569;">{{ h.by }}</td>
+                  <td style="text-align:center;padding:11px;"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ h.hsBg }};color:{{ h.hsColor }};">{{ h.hs }}</span></td>
+                  <td style="text-align:center;padding:11px;"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:{{ h.syncBg }};color:{{ h.syncColor }};">{{ h.sync }}</span></td>
+                  <td style="text-align:right;padding:11px 16px;color:#94A3B8;">{{ h.date }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ RECEIVE ============ -->
+      <sc-if value="{{ isReceive }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="margin-bottom:18px;"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-file-import" style="color:#2563EB;margin-right:8px;"></i>รับเข้า / นำเข้า</h1><p style="font-size:13px;color:#475569;margin:4px 0 0;">บันทึกรับพัสดุเข้าคลังโรงครัว พร้อมอ้างอิงใบสั่งซื้อและกำหนดราคาทุน (Cost Snapshot)</p></div>
+        <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;align-items:start;">
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:13px;">
+            <div style="font-size:15px;font-weight:700;">ข้อมูลการรับเข้า</div>
+            <div><div style="font-size:12px;color:#94A3B8;margin-bottom:5px;">ใบสั่งซื้อ (PO)</div><div style="border:1px solid #E2E8F0;border-radius:9px;padding:9px 12px;font-size:13px;background:#F8FAFC;">PO-2025-1188</div></div>
+            <div><div style="font-size:12px;color:#94A3B8;margin-bottom:5px;">ผู้จำหน่าย</div><div style="border:1px solid #E2E8F0;border-radius:9px;padding:9px 12px;font-size:13px;background:#F8FAFC;">หจก. ไทยดริล ซัพพลาย</div></div>
+            <div><div style="font-size:12px;color:#94A3B8;margin-bottom:5px;">รับเข้าคลังโรงครัว</div>
+              <div style="display:flex;gap:8px;"><span style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:9px;border-radius:9px;background:#EFF6FF;color:#2563EB;border:1px solid #BFD3FB;">คลังโรงครัว A</span><span style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:9px;border-radius:9px;background:#F8FAFC;color:#94A3B8;border:1px solid #E2E8F0;">คลังโรงครัว B</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="font-size:15px;font-weight:700;">รายการที่รับเข้า</div><span style="font-size:12px;font-weight:600;color:#2563EB;background:#EFF6FF;border:1px solid #BFD3FB;border-radius:8px;padding:6px 11px;cursor:pointer;"><i class="fa-solid fa-barcode" style="margin-right:6px;"></i>สแกนเพิ่ม</span></div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="border-bottom:1px solid #E2E8F0;"><th style="text-align:left;padding:8px 4px;font-weight:700;color:#475569;">พัสดุ</th><th style="text-align:right;padding:8px;font-weight:700;color:#475569;">จำนวน</th><th style="text-align:right;padding:8px;font-weight:700;color:#475569;">ทุน/หน่วย</th><th style="text-align:right;padding:8px 4px;font-weight:700;color:#475569;">รวม</th></tr></thead>
+              <tbody>
+                <tr style="border-bottom:1px solid #F1F5F9;"><td style="padding:11px 4px;">ไส้กรองไฮดรอลิก <span style="font-size:11px;color:#94A3B8;">HF-2201</span></td><td style="text-align:right;padding:11px;">20</td><td style="text-align:right;padding:11px;">฿850</td><td style="text-align:right;padding:11px 4px;font-weight:600;">฿17,000</td></tr>
+                <tr style="border-bottom:1px solid #F1F5F9;"><td style="padding:11px 4px;">น้ำมันเครื่อง 15W-40 <span style="font-size:11px;color:#94A3B8;">OIL-1540</span></td><td style="text-align:right;padding:11px;">60</td><td style="text-align:right;padding:11px;">฿638</td><td style="text-align:right;padding:11px 4px;font-weight:600;">฿38,280</td></tr>
+              </tbody>
+            </table>
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px dashed #E2E8F0;margin-top:12px;padding-top:14px;">
+              <div><div style="font-size:11px;color:#94A3B8;">มูลค่ารับเข้ารวม</div><div style="font-size:20px;font-weight:800;">฿55,280</div></div>
+              <button onClick="{{ onReceiveConfirm }}" style="background:#2563EB;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;"><i class="fa-solid fa-circle-check" style="margin-right:7px;"></i>ยืนยันรับเข้าคลังโรงครัว</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ RETURNS ============ -->
+      <sc-if value="{{ isReturns }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="margin-bottom:18px;"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-arrow-rotate-left" style="color:#2563EB;margin-right:8px;"></i>การส่งคืน</h1><p style="font-size:13px;color:#475569;margin:4px 0 0;">รับคืนพัสดุที่เบิกไปแต่ไม่ได้ใช้ คืนเข้าสต็อกพร้อมระบุสภาพ</p></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+              <th style="text-align:left;padding:10px 16px;font-weight:700;color:#475569;">พัสดุ</th>
+              <th style="text-align:right;padding:10px;font-weight:700;color:#475569;">จำนวน</th>
+              <th style="text-align:left;padding:10px;font-weight:700;color:#475569;">จาก WO</th>
+              <th style="text-align:left;padding:10px;font-weight:700;color:#475569;">ผู้คืน</th>
+              <th style="text-align:center;padding:10px;font-weight:700;color:#475569;">สภาพ</th>
+              <th style="text-align:right;padding:10px 16px;font-weight:700;color:#475569;">จัดการ</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ returnView }}" as="r" hint-placeholder-count="3">
+                <tr style="border-bottom:1px solid #F1F5F9;">
+                  <td style="padding:11px 16px;"><div style="font-weight:600;">{{ r.item }}</div><div style="font-size:11px;color:#94A3B8;">{{ r.code }} · {{ r.date }}</div></td>
+                  <td style="text-align:right;padding:11px;">{{ r.qty }}</td>
+                  <td style="padding:11px;color:#2563EB;font-weight:600;">{{ r.wo }}</td>
+                  <td style="padding:11px;color:#475569;">{{ r.by }}</td>
+                  <td style="text-align:center;padding:11px;"><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;color:{{ r.condColor }};border:1px solid {{ r.condColor }};">{{ r.cond }}</span></td>
+                  <td style="text-align:right;padding:11px 16px;"><button onClick="{{ onReturnConfirm }}" style="font-size:12px;font-weight:600;color:#2563EB;background:#EFF6FF;border:1px solid #BFD3FB;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;">รับคืน</button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ EMPLOYEES ============ -->
+      <sc-if value="{{ isEmployees }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="margin-bottom:18px;"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-users" style="color:#2563EB;margin-right:8px;"></i>พนักงาน</h1><p style="font-size:13px;color:#475569;margin:4px 0 0;">ทะเบียนผู้ใช้งานสำหรับยืนยันตัวตน (Digital Handshake) ในการเบิก–จ่าย</p></div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+          <sc-for list="{{ empView }}" as="e" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:#EFF6FF;color:#2563EB;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;"><i class="fa-solid fa-user"></i></div>
+              <div style="flex:1;"><div style="font-size:14px;font-weight:700;">{{ e.name }}</div><div style="font-size:12px;color:#475569;">{{ e.role }}</div></div>
+              <div style="text-align:right;"><div style="font-size:11px;color:#94A3B8;">{{ e.code }}</div><span style="font-size:11px;font-weight:600;color:#16A34A;"><i class="fa-solid fa-id-card" style="margin-right:4px;"></i>พร้อมสแกน</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ LOGS ============ -->
+      <sc-if value="{{ isLogs }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:1180px;margin:0 auto;">
+        <div style="margin-bottom:18px;"><h1 style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin:0;"><i class="fa-solid fa-file-lines" style="color:#2563EB;margin-right:8px;"></i>บันทึกการใช้งาน</h1><p style="font-size:13px;color:#475569;margin:4px 0 0;">Audit log ทุกการกระทำพร้อม Timestamp — รากฐานของการป้องกันการรั่วไหล</p></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:6px 16px;">
+          <sc-for list="{{ logView }}" as="l" hint-placeholder-count="5">
+            <div style="display:flex;gap:14px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #F1F5F9;">
+              <div style="font-size:12px;color:#94A3B8;width:120px;flex:0 0 120px;">{{ l.time }}</div>
+              <div style="flex:1;"><div style="font-size:13px;color:#0F172A;">{{ l.act }}</div><div style="font-size:11px;color:#94A3B8;margin-top:2px;">โดย {{ l.user }}</div></div>
+              <span style="font-size:11px;font-weight:600;padding:3px 11px;border-radius:999px;background:#F1F5F9;color:{{ l.tagColor }};white-space:nowrap;">{{ l.tag }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+    </main>
+  </div>
+
+  <!-- ===== DIGITAL HANDSHAKE MODAL (P2) ===== -->
+  <sc-if value="{{ hsOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,0.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;">
+    <div style="background:#fff;border-radius:16px;width:440px;max-width:100%;padding:22px;box-shadow:0 24px 60px rgba(15,23,42,0.3);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:18px;font-weight:800;"><i class="fa-solid fa-fingerprint" style="color:#2563EB;margin-right:8px;"></i>Digital Handshake</div>
+        <button onClick="{{ onCloseHs }}" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:18px;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p style="font-size:13px;color:#475569;margin:0 0 16px;">ยืนยันตัวตนทั้งผู้เบิกและผู้จ่าย เพื่อป้องกันการแอบอ้าง</p>
+
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;font-size:13px;">
+        <div><div style="color:#94A3B8;font-size:11px;">ใบสั่งซ่อม</div><div style="font-weight:600;">WO-2025-0481 · DZ06</div></div>
+        <div style="text-align:right;"><div style="color:#94A3B8;font-size:11px;">มูลค่ารวม</div><div style="font-weight:700;">{{ hsTotalFmt }}</div></div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-bottom:18px;">
+        <button onClick="{{ onScanReq }}" style="{{ scanReqStyle }}">
+          <i class="fa-solid {{ scanReqIcon }}" style="font-size:22px;"></i>
+          <span style="font-size:12px;font-weight:700;">ผู้เบิก</span>
+          <span style="font-size:11px;">{{ scanReqText }}</span>
+        </button>
+        <button onClick="{{ onScanIss }}" style="{{ scanIssStyle }}">
+          <i class="fa-solid {{ scanIssIcon }}" style="font-size:22px;"></i>
+          <span style="font-size:12px;font-weight:700;">ผู้จ่าย</span>
+          <span style="font-size:11px;">{{ scanIssText }}</span>
+        </button>
+      </div>
+
+      <button onClick="{{ onConfirmHs }}" style="{{ hsConfirmStyle }}">{{ hsConfirmLabel }}</button>
+      <div style="text-align:center;font-size:11px;color:#94A3B8;margin-top:10px;"><i class="fa-solid fa-shield-halved" style="margin-right:5px;"></i>บันทึกออฟไลน์พร้อม UUID + Timestamp — ซิงค์อัตโนมัติเมื่อมีสัญญาณ</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== TOAST ===== -->
+  <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:12px 20px;border-radius:11px;font-size:13px;font-weight:600;z-index:60;display:flex;align-items:center;gap:10px;box-shadow:0 12px 32px rgba(15,23,42,0.35);">
+    <i class="fa-solid fa-circle-check" style="color:#4ADE80;font-size:15px;"></i>{{ toast }}
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'withdraw',
+    search: '',
+    cart: [
+      { id:'hf',  code:'HF-2201',  name:'ไส้กรองไฮดรอลิก',      unit:'ชิ้น',  wh:'A', stock:14, unitCost:850, qty:2, reason:'' },
+      { id:'oil', code:'OIL-1540', name:'น้ำมันเครื่อง 15W-40', unit:'ลิตร',  wh:'B', stock:3,  unitCost:638, qty:4, reason:'' },
+    ],
+    hsOpen:false, hsReq:false, hsIss:false,
+    pending:12, syncing:false, toast:null,
+    cycle: [
+      { id:'hf',    code:'HF-2201',  name:'ไส้กรองไฮดรอลิก',      wh:'A', system:14,  counted:14,  reason:'' },
+      { id:'oil',   code:'OIL-1540', name:'น้ำมันเครื่อง 15W-40', wh:'B', system:7,   counted:3,   reason:'' },
+      { id:'plug',  code:'SP-DZ',    name:'หัวเทียน DZ',          wh:'A', system:2,   counted:0,   reason:'damaged' },
+      { id:'grease',code:'GR-EP2',   name:'จาระบี EP-2',          wh:'B', system:26,  counted:26,  reason:'' },
+      { id:'bolt',  code:'BT-M16',   name:'สลักเกลียว M16',       wh:'A', system:140, counted:138, reason:'' },
+    ],
+  };
+
+  catalog = [
+    { id:'hf',    code:'HF-2201',  name:'ไส้กรองไฮดรอลิก',      unit:'ชิ้น',    wh:'A', stock:14,  unitCost:850 },
+    { id:'oil',   code:'OIL-1540', name:'น้ำมันเครื่อง 15W-40', unit:'ลิตร',    wh:'B', stock:3,   unitCost:638 },
+    { id:'vbelt', code:'VB-0093',  name:'สายพาน V-belt B-120',  unit:'เส้น',    wh:'A', stock:8,   unitCost:1250 },
+    { id:'plug',  code:'SP-DZ',    name:'หัวเทียน DZ',          unit:'ชิ้น',    wh:'A', stock:0,   unitCost:95 },
+    { id:'grease',code:'GR-EP2',   name:'จาระบี EP-2',          unit:'กระป๋อง', wh:'B', stock:26,  unitCost:210 },
+    { id:'bolt',  code:'BT-M16',   name:'สลักเกลียว M16',       unit:'ตัว',     wh:'A', stock:140, unitCost:18 },
+  ];
+
+  money(n){ return '฿' + Math.round(n).toLocaleString(); }
+
+  setView(v){ this.setState({ view:v }); }
+  setSearch(e){ this.setState({ search:e.target.value }); }
+  addItem(it){ if(this.state.cart.some(c=>c.id===it.id)) return; this.setState({ cart:[...this.state.cart, { ...it, qty:1, reason:'' }] }); }
+  changeQty(id,d){ this.setState({ cart:this.state.cart.map(c=>c.id===id?{...c,qty:Math.max(1,c.qty+d)}:c) }); }
+  setReason(id,v){ this.setState({ cart:this.state.cart.map(c=>c.id===id?{...c,reason:v}:c) }); }
+  removeItem(id){ this.setState({ cart:this.state.cart.filter(c=>c.id!==id) }); }
+
+  openHs(){ this.setState({ hsOpen:true, hsReq:false, hsIss:false }); }
+  closeHs(){ this.setState({ hsOpen:false }); }
+  scan(who){ this.setState(who==='req'?{hsReq:true}:{hsIss:true}); }
+  confirmHs(){
+    this.setState({ hsOpen:false, cart:[], pending:this.state.pending+1, hsReq:false, hsIss:false });
+    this.flash('บันทึกการเบิกแล้ว (ออฟไลน์) · เก็บ UUID เรียบร้อย');
+  }
+  doSync(){
+    if(this.state.syncing || this.state.pending===0) return;
+    this.setState({ syncing:true });
+    clearTimeout(this._s);
+    this._s = setTimeout(()=>{ this.setState({ syncing:false, pending:0 }); this.flash('ซิงค์ขึ้นระบบศูนย์กลางสำเร็จ'); }, 1500);
+  }
+  setCycleReason(id,v){ this.setState({ cycle:this.state.cycle.map(c=>c.id===id?{...c,reason:v}:c) }); }
+  reconcile(){ this.flash('Reconcile & ปิดรอบตรวจนับเรียบร้อย'); }
+  flash(msg){ this.setState({ toast:msg }); clearTimeout(this._t); this._t=setTimeout(()=>this.setState({ toast:null }), 2800); }
+
+  renderVals(){
+    const s = this.state;
+    const navBase = 'width:100%;display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;font-size:13px;text-align:left;border:none;cursor:pointer;font-family:inherit;';
+    const navOn  = navBase + 'background:#EFF6FF;color:#2563EB;font-weight:600;border-left:3px solid #2563EB;padding-left:9px;';
+    const navOff = navBase + 'background:none;color:#475569;';
+    const nav = (v) => s.view===v ? navOn : navOff;
+    const tab = (on)=> `padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;background:${on?'#2563EB':'#fff'};color:${on?'#fff':'#475569'};`;
+
+    // catalog
+    const inCart = new Set(s.cart.map(c=>c.id));
+    const q = s.search.trim().toLowerCase();
+    const catalogView = this.catalog
+      .filter(it => !q || it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q))
+      .map(it => {
+        const added = inCart.has(it.id);
+        const out = it.stock === 0;
+        return {
+          ...it,
+          costFmt: this.money(it.unitCost),
+          stockLabel: out ? 'หมดสต็อก' : ('คลังโรงครัว ' + it.wh + ' · เหลือ ' + it.stock + ' ' + it.unit),
+          stockColor: out ? '#DC2626' : (it.stock <= 5 ? '#D97706' : '#475569'),
+          addLabel: added ? 'เพิ่มแล้ว' : 'เพิ่ม',
+          addIcon: added ? 'fa-check' : 'fa-plus',
+          addStyle: 'flex:0 0 auto;font-size:12px;font-weight:600;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;white-space:nowrap;' +
+            (added ? 'background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0;' : 'background:#2563EB;color:#fff;border:1px solid #2563EB;'),
+          onAdd: () => this.addItem(it),
+        };
+      });
+
+    // cart
+    let total = 0;
+    const cartView = s.cart.map(c => {
+      const line = c.qty * c.unitCost; total += line;
+      const need = c.qty > c.stock;
+      const blocked = need && !c.reason;
+      return {
+        ...c,
+        costFmt: this.money(c.unitCost),
+        lineFmt: this.money(line),
+        need, blocked,
+        rowStyle: 'border:1px solid ' + (need ? '#FDE68A' : '#E2E8F0') + ';border-radius:10px;padding:11px 12px;' + (need ? 'background:#FFFEFB;' : ''),
+        onInc: () => this.changeQty(c.id, 1),
+        onDec: () => this.changeQty(c.id, -1),
+        onRemove: () => this.removeItem(c.id),
+        onReason: (e) => this.setReason(c.id, e.target.value),
+      };
+    });
+    const blockedAny = cartView.some(c => c.blocked);
+    const confirmDisabled = s.cart.length === 0 || blockedAny;
+    const confirmBase = 'width:100%;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;transition:all .15s;';
+    const confirmStyle = confirmBase + (confirmDisabled ? 'background:#CBD5E1;color:#fff;cursor:not-allowed;' : 'background:#2563EB;color:#fff;cursor:pointer;');
+
+    // handshake
+    const hsBoth = s.hsReq && s.hsIss;
+    const scanBase = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:18px 10px;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;';
+    const scanOn = (on)=> scanBase + (on ? 'background:#F0FDF4;border:2px solid #16A34A;color:#16A34A;' : 'background:#EFF6FF;border:2px dashed #93B4F7;color:#2563EB;');
+    const hsConfirmStyle = 'width:100%;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;' +
+      (hsBoth ? 'background:#2563EB;color:#fff;cursor:pointer;' : 'background:#CBD5E1;color:#fff;cursor:not-allowed;');
+
+    // cycle
+    const cycleView = s.cycle.map(r => {
+      const diff = r.counted - r.system;
+      const variance = diff !== 0;
+      const blocked = variance && !r.reason;
+      return {
+        ...r,
+        diff, diffFmt: variance ? ((diff>0?'+':'') + diff) : '0',
+        variance, matched: !variance, blocked,
+        diffColor: variance ? (diff<0 ? '#DC2626' : '#16A34A') : '#94A3B8',
+        trStyle: 'border-bottom:1px solid #F1F5F9;' + (variance ? 'background:#FFFEFB;' : ''),
+        selStyle: 'width:100%;padding:6px 9px;border:1px solid ' + (r.reason ? '#BBF7D0' : '#FCA5A5') + ';border-radius:7px;font-size:12px;font-family:inherit;outline:none;color:#0F172A;background:' + (r.reason ? '#F0FDF4' : '#FEF2F2') + ';',
+        onReason: (e) => this.setCycleReason(r.id, e.target.value),
+      };
+    });
+    const matched = cycleView.filter(c=>c.matched).length;
+    const varCount = cycleView.filter(c=>c.variance).length;
+    const reconcileDisabled = cycleView.some(c=>c.blocked);
+    const reconcileStyle = 'font-size:13px;font-weight:700;border:none;border-radius:9px;padding:9px 18px;font-family:inherit;' +
+      (reconcileDisabled ? 'background:#CBD5E1;color:#fff;cursor:not-allowed;' : 'background:#2563EB;color:#fff;cursor:pointer;');
+
+    // sync chip
+    const synced = s.pending === 0;
+    const syncChipStyle = 'display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit;transition:all .15s;' +
+      (synced ? 'background:#F0FDF4;border:1px solid #BBF7D0;color:#16A34A;'
+        : (s.syncing ? 'background:#EFF6FF;border:1px solid #BFD3FB;color:#2563EB;'
+          : 'background:#FFFBEB;border:1px solid #FDE68A;color:#B45309;'));
+    const syncLabel = s.syncing ? 'กำลังซิงค์…' : (synced ? 'ซิงค์แล้ว · ออนไลน์' : (s.pending + ' รายการรอซิงค์'));
+
+    const crumbMap = { withdraw:'เบิกสินค้า', cycle:'ตรวจนับสต็อก', roi:'แดชบอร์ดต้นทุน', items:'รายการสินค้า', history:'ประวัติการเบิก', receive:'รับเข้า / นำเข้า', returns:'การส่งคืน', employees:'พนักงาน', logs:'บันทึกการใช้งาน' };
+    const crumb = crumbMap[s.view] || 'ภาพรวม';
+    const fmtB = (n) => '฿' + Math.round(n).toLocaleString();
+    const stockBase = [
+      { name:'ไส้กรองไฮดรอลิก',      code:'HF-2201',  a:14,  b:6,  cost:850,  unit:'ชิ้น' },
+      { name:'น้ำมันเครื่อง 15W-40', code:'OIL-1540', a:0,   b:3,  cost:638,  unit:'ลิตร' },
+      { name:'สายพาน V-belt B-120',  code:'VB-0093',  a:8,   b:4,  cost:1250, unit:'เส้น' },
+      { name:'หัวเทียน DZ',          code:'SP-DZ',    a:0,   b:0,  cost:95,   unit:'ชิ้น' },
+      { name:'จาระบี EP-2',          code:'GR-EP2',   a:12,  b:26, cost:210,  unit:'กระป๋อง' },
+      { name:'สลักเกลียว M16',       code:'BT-M16',   a:140, b:60, cost:18,   unit:'ตัว' },
+    ];
+    const stockView = stockBase.map(it => { const total = it.a + it.b; const out = total===0; const low = total>0 && total<=10; return { ...it, total, costFmt:fmtB(it.cost), valueFmt:fmtB(total*it.cost), status: out?'หมด':(low?'ใกล้หมด':'ปกติ'), statusColor: out?'#DC2626':(low?'#D97706':'#16A34A'), statusBg: out?'#FEF2F2':(low?'#FFFBEB':'#F0FDF4') }; });
+    const historyView = [
+      { wo:'WO-2025-0481', item:'ไส้กรองไฮดรอลิก +1 รายการ', val:'฿4,252', by:'ช่างสมชาย', hs:'2 ฝ่าย', sync:'ออฟไลน์',  date:'17/06 09:12' },
+      { wo:'WO-2025-0478', item:'สายพาน V-belt B-120',       val:'฿2,500', by:'ช่างนรา',   hs:'2 ฝ่าย', sync:'ซิงค์แล้ว', date:'16/06 14:05' },
+      { wo:'WO-2025-0475', item:'จาระบี EP-2 ×3',            val:'฿630',   by:'ช่างสมชาย', hs:'2 ฝ่าย', sync:'ซิงค์แล้ว', date:'16/06 08:40' },
+      { wo:'WO-2025-0470', item:'สลักเกลียว M16 ×20',        val:'฿360',   by:'ช่างพิชัย', hs:'1 ฝ่าย', sync:'ตรวจสอบ',  date:'15/06 16:22' },
+      { wo:'WO-2025-0466', item:'น้ำมัน 15W-40 ×4',          val:'฿2,552', by:'ช่างนรา',   hs:'2 ฝ่าย', sync:'ซิงค์แล้ว', date:'15/06 10:15' },
+    ].map(h => ({ ...h, hsColor: h.hs==='2 ฝ่าย'?'#16A34A':'#DC2626', hsBg: h.hs==='2 ฝ่าย'?'#F0FDF4':'#FEF2F2', syncColor: h.sync==='ซิงค์แล้ว'?'#16A34A':(h.sync==='ตรวจสอบ'?'#DC2626':'#B45309'), syncBg: h.sync==='ซิงค์แล้ว'?'#F0FDF4':(h.sync==='ตรวจสอบ'?'#FEF2F2':'#FFFBEB') }));
+    const logView = [
+      { time:'17/06 09:12:04', user:'ช่างสมชาย', act:'เบิกพัสดุ WO-0481 · ยืนยัน Handshake 2 ฝ่าย',     tag:'เบิก',       tagColor:'#2563EB' },
+      { time:'17/06 08:55:11', user:'พี่วิรัตน์', act:'อนุมัติเบิกข้ามคลังโรงครัว (เหตุผล: งานฉุกเฉินหน้างาน)', tag:'Soft Block', tagColor:'#D97706' },
+      { time:'16/06 17:02:39', user:'แอดมินสุดา', act:'ปิดรอบตรวจนับ #CC-0624 · ส่วนต่างสุทธิ ฿0',       tag:'Reconcile',  tagColor:'#16A34A' },
+      { time:'16/06 14:05:50', user:'ช่างนรา',   act:'เบิกพัสดุ WO-0478 · ซิงค์ขึ้นศูนย์กลางสำเร็จ',    tag:'เบิก',       tagColor:'#2563EB' },
+      { time:'15/06 16:22:08', user:'ช่างพิชัย', act:'พบ Handshake ฝ่ายเดียว — ตั้งสถานะรอตรวจสอบ',     tag:'แจ้งเตือน',  tagColor:'#DC2626' },
+    ];
+    const returnView = [
+      { item:'สายพาน V-belt B-120', code:'VB-0093', qty:'1 เส้น',    wo:'WO-2025-0478', by:'ช่างนรา',   cond:'ใช้งานได้', condColor:'#16A34A', date:'16/06' },
+      { item:'ไส้กรองไฮดรอลิก',     code:'HF-2201', qty:'1 ชิ้น',    wo:'WO-2025-0460', by:'ช่างสมชาย', cond:'ชำรุด',     condColor:'#DC2626', date:'14/06' },
+      { item:'จาระบี EP-2',         code:'GR-EP2',  qty:'2 กระป๋อง', wo:'WO-2025-0455', by:'ช่างพิชัย', cond:'ใช้งานได้', condColor:'#16A34A', date:'13/06' },
+    ];
+    const empView = [
+      { name:'สมชาย ใจดี',    role:'เจ้าหน้าที่คลังโรงครัว A',     code:'EMP-014' },
+      { name:'นรา ทองสุข',    role:'ช่างซ่อมบำรุง',         code:'EMP-021' },
+      { name:'วิรัตน์ มั่นคง', role:'หัวหน้าคลังโรงครัว (ผู้จ่าย)', code:'EMP-003' },
+      { name:'สุดา แสงทอง',   role:'แอดมินระบบ',            code:'EMP-001' },
+    ];
+
+    // ROI static
+    const abc = [
+      { label:'DZ06', val:'฿720K', h:'150px', color:'#2563EB' },
+      { label:'DZ03', val:'฿510K', h:'106px', color:'#60A5FA' },
+      { label:'TR11', val:'฿410K', h:'85px',  color:'#93C5FD' },
+      { label:'LD02', val:'฿300K', h:'62px',  color:'#BFDBFE' },
+      { label:'อื่นๆ', val:'฿180K', h:'38px',  color:'#DBEAFE' },
+    ];
+    const projects = [
+      { name:'PIT-A ขยายบ่อ', val:'฿1.1M', w:'80%', color:'#2563EB' },
+      { name:'ถนนลำเลียง',    val:'฿0.7M', w:'52%', color:'#60A5FA' },
+      { name:'โรงโม่',         val:'฿0.6M', w:'44%', color:'#93C5FD' },
+    ];
+
+    return {
+      // nav + tabs
+      navRStyle: nav('roi'), navItems: nav('items'), navCStyle: nav('cycle'), navReceive: nav('receive'),
+      navWStyle: nav('withdraw'), navHistory: nav('history'), navReturns: nav('returns'), navEmp: nav('employees'), navLogs: nav('logs'),
+      tW: tab(s.view==='withdraw'), tC: tab(s.view==='cycle'), tR: tab(s.view==='roi'),
+      goRoi: ()=>this.setView('roi'), goItems: ()=>this.setView('items'), goCycle: ()=>this.setView('cycle'), goReceive: ()=>this.setView('receive'),
+      goWithdraw: ()=>this.setView('withdraw'), goHistory: ()=>this.setView('history'), goReturns: ()=>this.setView('returns'), goEmp: ()=>this.setView('employees'), goLogs: ()=>this.setView('logs'),
+      isWithdraw: s.view==='withdraw', isCycle: s.view==='cycle', isRoi: s.view==='roi',
+      isItems: s.view==='items', isHistory: s.view==='history', isReceive: s.view==='receive', isReturns: s.view==='returns', isEmployees: s.view==='employees', isLogs: s.view==='logs',
+      stockView, historyView, logView, returnView, empView,
+      onReceiveConfirm: ()=>this.flash('บันทึกรับเข้าคลังโรงครัวเรียบร้อย · อัปเดตสต็อก'),
+      onReturnConfirm: ()=>this.flash('บันทึกรับคืนพัสดุเรียบร้อย'),
+      crumb,
+      // withdraw
+      search: s.search, onSearch: (e)=>this.setSearch(e),
+      catalogView, cartView, cartCount: s.cart.length, cartEmpty: s.cart.length===0,
+      totalFmt: this.money(total), confirmStyle, onConfirm: confirmDisabled ? (()=>{}) : (()=>this.openHs()),
+      // handshake
+      hsOpen: s.hsOpen, hsTotalFmt: this.money(total || 4250),
+      onScanReq: ()=>this.scan('req'), onScanIss: ()=>this.scan('iss'),
+      onCloseHs: ()=>this.closeHs(), onConfirmHs: hsBoth ? (()=>this.confirmHs()) : (()=>{}),
+      hsConfirmStyle, hsConfirmLabel: hsBoth ? 'ยืนยันการเบิก' : 'รอยืนยันครบ 2 ฝ่าย',
+      scanReqStyle: scanOn(s.hsReq), scanIssStyle: scanOn(s.hsIss),
+      scanReqIcon: s.hsReq ? 'fa-circle-check' : 'fa-id-card',
+      scanIssIcon: s.hsIss ? 'fa-circle-check' : 'fa-id-card',
+      scanReqText: s.hsReq ? 'ช่างสมชาย ✓' : 'แตะเพื่อสแกน',
+      scanIssText: s.hsIss ? 'พี่วิรัตน์ ✓' : 'แตะเพื่อสแกน',
+      // sync
+      pending: s.pending, syncing: s.syncing, syncIdle: !s.syncing,
+      syncDotColor: synced ? '#16A34A' : '#D97706', syncLabel, syncChipStyle, onSync: ()=>this.doSync(),
+      // cycle
+      cycleView, cycleTotal: s.cycle.length+13, matched, varCount, reconcileStyle, onReconcile: reconcileDisabled ? (()=>{}) : (()=>this.reconcile()),
+      // roi
+      abc, projects,
+      // toast
+      toastShow: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>
