@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@warehouse/types": ["../../packages/types/src/index.ts"],
+      "@warehouse/validators": ["../../packages/validators/src/index.ts"],
+      "@warehouse/api-client": ["../../packages/api-client/src/index.ts"],
+      "@warehouse/api-client/hooks": ["../../packages/api-client/src/hooks.ts"],
+      "@warehouse/sync-engine": ["../../packages/sync-engine/src/index.ts"]
+    }
+  }
+}
