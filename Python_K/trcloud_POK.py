@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 TRCloud PO — ใบสั่งซื้อ (Purchase Order)
 ========================================
@@ -24,7 +24,7 @@ DEFAULT_OUTPUT = os.path.join(_API_DATA, "po.json")
 DATE_FROM = "2023-01-01"
 DATE_TO   = "2026-12-31"
 
-COMPANY_ID = "14"
+COMPANY_ID = os.getenv("TRCLOUD_COMPANY_ID", "14")
 PASSKEY    = os.getenv("TRCLOUD_PASSKEY", "")
 _ORIGIN_PASSKEY = os.getenv("TRCLOUD_ORIGIN_PASSKEY", "")
 # ============================================================

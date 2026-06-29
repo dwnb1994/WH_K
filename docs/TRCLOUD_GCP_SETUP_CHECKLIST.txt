@@ -1,0 +1,171 @@
+TRCloud GCP setup checklist
+Project ID: whtdk-500801
+Project number: 789384746166
+Date: 2026-06-30
+
+Do not commit real credentials.
+
+
+1. Enable Google Cloud APIs
+---------------------------
+[ ] Cloud Run
+[ ] Cloud Scheduler
+[ ] Cloud Storage
+[ ] Secret Manager
+[ ] Pub/Sub
+[ ] Cloud SQL Admin
+[ ] Artifact Registry
+[ ] BigQuery
+[ ] Cloud Build
+
+
+2. Create service accounts
+--------------------------
+[ ] trcloud-sync-sa@whtdk-500801.iam.gserviceaccount.com
+[ ] warehouse-api-sa@whtdk-500801.iam.gserviceaccount.com
+
+trcloud-sync-sa roles:
+[ ] Secret Manager Secret Accessor
+[ ] Storage Object Admin on kitchen-sepon-data
+[ ] Cloud SQL Client
+[ ] Pub/Sub Publisher
+[ ] BigQuery Data Editor
+
+warehouse-api-sa roles:
+[ ] Storage Object Viewer on kitchen-sepon-data
+[ ] Cloud SQL Client
+[ ] Pub/Sub Subscriber or permission for internal reload flow
+
+
+3. Create Cloud Storage bucket
+------------------------------
+[ ] Bucket: kitchen-sepon-data
+[ ] Region: asia-southeast1
+[ ] Uniform bucket-level access: enabled
+
+Expected folders:
+[ ] trcloud/raw/
+[ ] trcloud/snapshots/
+[ ] trcloud/normalized/
+[ ] trcloud/parquet/
+[ ] trcloud/runs/
+
+
+4. Create Secret Manager secrets
+--------------------------------
+[ ] trcloud-erp-url
+[ ] trcloud-username
+[ ] trcloud-password
+[ ] trcloud-device-id
+[ ] trcloud-origin-passkey
+[ ] trcloud-company-id
+[ ] trcloud-company-passkey
+[ ] database-url
+
+Kitchen target company:
+[ ] trcloud-company-id should be 14
+
+
+5. Create Cloud SQL PostgreSQL
+------------------------------
+[ ] Instance created
+[ ] Database created
+[ ] User created
+[ ] DATABASE_URL stored in Secret Manager
+
+Create tables:
+[ ] trcloud_sync_documents
+[ ] trcloud_sync_runs
+[ ] trcloud_sync_locks
+
+
+6. Create Pub/Sub
+-----------------
+[ ] Topic: trcloud-sync-events
+[ ] Subscription for API reload or worker
+
+
+7. Build sync container
+-----------------------
+[ ] Artifact Registry repo: kitchen
+[ ] Image: asia-southeast1-docker.pkg.dev/whtdk-500801/kitchen/trcloud-sync:latest
+[ ] Python_K included
+[ ] Google Cloud client libraries included
+[ ] Sync runner included
+
+
+8. Create Cloud Run Jobs
+------------------------
+[ ] python-trcloud-backfill
+[ ] python-trcloud-delta
+[ ] python-trcloud-reconcile
+
+Job env:
+[ ] GCP_PROJECT_ID=whtdk-500801
+[ ] GCS_BUCKET=kitchen-sepon-data
+[ ] TRCLOUD_COMPANY_ID from secret
+[ ] TRCLOUD_PASSKEY from secret
+[ ] TRCLOUD_ORIGIN_PASSKEY from secret
+[ ] TRCLOUD_USERNAME from secret
+[ ] TRCLOUD_PASSWORD from secret
+[ ] TRCLOUD_DEVICE_ID from secret
+[ ] DATABASE_URL from secret
+
+
+9. Create Cloud Scheduler jobs
+------------------------------
+[ ] trcloud-delta-every-5min -> python-trcloud-delta
+[ ] trcloud-nightly-reconcile -> python-trcloud-reconcile
+[ ] optional monthly/manual backfill refresh -> python-trcloud-backfill
+
+Timezone:
+[ ] Asia/Bangkok
+
+
+10. Deploy NestJS API
+---------------------
+[ ] Cloud Run service: warehouse-api
+[ ] Service account: warehouse-api-sa
+[ ] Reads latest.json from Cloud Storage
+[ ] Caches data in memory
+[ ] Supports internal reload endpoint
+
+
+11. Run first backfill
+----------------------
+[ ] date_from=2026-01-01
+[ ] date_to=today
+[ ] doc_types=MR,GR,INC,PO
+[ ] latest.json created for each doc type
+[ ] NDJSON created
+[ ] Cloud SQL state populated
+[ ] Pub/Sub event emitted
+[ ] API cache reload verified
+
+
+12. Verify delta sync
+---------------------
+[ ] Run delta with lookback_days=14
+[ ] MR uses detail.gl.update_dt
+[ ] GR uses detail.gl.update_dt
+[ ] INC uses content_hash
+[ ] PO uses update_dt
+[ ] changed docs update Cloud SQL
+[ ] latest.json promoted only after validation
+
+
+13. Verify API response
+-----------------------
+[ ] Web dashboard loads from API
+[ ] API does not call TRCloud during normal page load
+[ ] Reload event refreshes memory cache
+[ ] Fallback reload endpoint works
+
+
+14. Monitoring
+--------------
+[ ] Cloud Run Job logs checked
+[ ] Failed login alert
+[ ] Empty/low record count alert
+[ ] Snapshot validation failure alert
+[ ] Delta job overlap lock verified

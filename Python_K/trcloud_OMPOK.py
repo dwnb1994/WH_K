@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 TRCloud Order-Management PO — ใบสั่งซื้อ (ordermgmt_po)
 ======================================================
@@ -26,6 +26,7 @@ from typing import Optional
 from datetime import datetime
 
 from trcloud_auth import get_cookie_for_company
+from trcloud_env import env
 
 # บังคับ console ให้เป็น UTF-8 (กัน UnicodeEncodeError จากภาษาไทย/emoji บน Windows cp1252)
 for _stream in (sys.stdout, sys.stderr):
@@ -40,13 +41,13 @@ for _stream in (sys.stdout, sys.stderr):
 DATE_FROM = "2026-01-01"
 DATE_TO   = "2026-06-30"
 
-COMPANY_ID = "14"
-PASSKEY    = os.getenv("TRCLOUD_PASSKEY", "")
+COMPANY_ID = env("TRCLOUD_COMPANY_ID", "14")
+PASSKEY    = env("TRCLOUD_PASSKEY", "")
 
 # passkey ของบริษัทเดิม (25) ที่ใช้ตอน switch — ไม่ใช้ยิง API
-_ORIGIN_PASSKEY = os.getenv("TRCLOUD_ORIGIN_PASSKEY", "")
+_ORIGIN_PASSKEY = env("TRCLOUD_ORIGIN_PASSKEY", "")
 
-DEFAULT_RAW_COOKIE = get_cookie_for_company(COMPANY_ID, origin_passkey=_ORIGIN_PASSKEY)
+DEFAULT_RAW_COOKIE = ""
 
 OUTPUT_DIR = r"D:\Users\jacki\OneDrive\Desktop"
 # ============================================================
@@ -435,6 +436,9 @@ if __name__ == "__main__":
     _default_output = os.path.join(OUTPUT_DIR, f"TRCloud_OMPO_{datetime.now():%Y%m%d_%H%M%S}.xlsx")
     parser.add_argument('--output', default=_default_output)
     args = parser.parse_args()
+
+    if not args.cookie:
+        args.cookie = get_cookie_for_company(args.company_id, origin_passkey=_ORIGIN_PASSKEY)
 
     fetcher = TRCloudOrderPOFetcher(args.company_id, args.passkey, args.cookie)
 

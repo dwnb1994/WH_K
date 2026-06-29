@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+dist/
+out/
+**/__pycache__/
+**/*.pyc
+Python_K/data/
+Python_K/K_Wscr_info.txt
+uploads/

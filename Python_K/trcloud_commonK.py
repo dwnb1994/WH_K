@@ -21,6 +21,7 @@ import requests
 from typing import Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
+from trcloud_env import env
 
 # บังคับ console ให้เป็น UTF-8 (กัน UnicodeEncodeError จากภาษาไทย/emoji บน Windows cp1252)
 for _stream in (sys.stdout, sys.stderr):
@@ -29,7 +30,7 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-BASE_URL = "https://thaidrill.trcloud.co"
+BASE_URL = env("TRCLOUD_ERP_URL", "https://thaidrill.trcloud.co")
 JSON_SCHEMA_VERSION = 2
 
 
@@ -275,6 +276,9 @@ class TRCloudICSFetcher:
                 continue
 
             head = data.get("head") or {}
+            gl = data.get("gl") or {}
+            if not isinstance(gl, dict):
+                gl = {}
             body = data.get("body") or data.get("detail") or []
 
             doc_number = _pick(
@@ -313,6 +317,10 @@ class TRCloudICSFetcher:
                 'po_ref':          _pick(rec.get('po_ref'), head.get('po_ref'), rec.get('reference')),
                 'po_id':           str(_pick(rec.get('po_id'), rec.get('reference_id'), head.get('po_id'))),
                 'organization':    _pick(rec.get('organization'), head.get('organization'), head.get('name')),
+                'source_created_at': str(_pick(gl.get('create_dt'), head.get('create_dt'), rec.get('create_dt'))),
+                'source_updated_at': str(_pick(gl.get('update_dt'), head.get('update_dt'), rec.get('update_dt'))),
+                'source_updater_id': str(_pick(gl.get('updater_id'), head.get('updater_id'), rec.get('updater_id'))),
+                'gl_transaction_id': str(_pick(gl.get('transaction_id'), head.get('transaction_id'), rec.get('transaction_id'))),
             }
             detail_heads[str(doc_id)] = head_ctx
 
@@ -413,6 +421,10 @@ class TRCloudICSFetcher:
             'unique_skus': stats.get('unique_skus', 0),
             'products': stats.get('product_names', []),
             'product_summary': stats.get('product_summary', []),
+            'source_created_at': str(merged.get('source_created_at') or merged.get('create_dt') or ''),
+            'source_updated_at': str(merged.get('source_updated_at') or merged.get('update_dt') or ''),
+            'source_updater_id': str(merged.get('source_updater_id') or merged.get('updater_id') or ''),
+            'gl_transaction_id': str(merged.get('gl_transaction_id') or merged.get('transaction_id') or ''),
         }
 
         if cfg.name == 'GR':
@@ -489,6 +501,8 @@ class TRCloudICSFetcher:
             'po_item_id': row.get('po_item_id') or '',
             'item_id': row.get('item_id') or '',
             'weight': row.get('weight') or '',
+            'source_created_at': str(row.get('source_created_at') or ''),
+            'source_updated_at': str(row.get('source_updated_at') or ''),
         }
         if cfg.name == 'GR':
             line['receive_id'] = doc_id

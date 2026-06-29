@@ -1,0 +1,180 @@
+TRCloud update sync notes for Kitchen data
+Generated: 2026-06-30
+
+Purpose
+-------
+This note records how to detect newly created or updated TRCloud documents for
+the Kitchen warehouse flow after logging in through the origin company and
+switching into company 14.
+
+Do not store real credentials in this file or in Git.
+
+
+Required environment variables
+------------------------------
+TRCLOUD_ERP_URL
+TRCLOUD_USERNAME
+TRCLOUD_PASSWORD
+TRCLOUD_DEVICE_ID
+TRCLOUD_COMPANY_ID
+TRCLOUD_PASSKEY
+TRCLOUD_ORIGIN_PASSKEY
+TRCLOUD_USE_COMPANY_SWITCH
+
+For Kitchen data:
+- Login starts from the origin company.
+- Switch into company 14.
+- TRCLOUD_COMPANY_ID should be 14 for Kitchen data extraction.
+- TRCLOUD_ORIGIN_PASSKEY is the origin company passkey.
+- TRCLOUD_PASSKEY is the target company 14 passkey.
+
+
+MR update detection
+-------------------
+Document type: MR
+Main id field: mr_id
+
+List endpoint:
+POST /application/ics/api/engine-ics/search_mr.php
+
+Detail endpoint:
+POST /application/ics/api/engine-ics/retrieve_mr.php
+
+Detail request body:
+json={"company_id":"<company_id>","passkey":"<passkey>","id":"<mr_id>"}
+
+Important fields found:
+- List response has date, status, editing, updater_id, approve_date.
+- List response does not provide a useful update timestamp.
+- Detail response contains gl.update_dt.
+- Detail response contains gl.create_dt.
+- Detail response contains gl.updater_id.
+
+Recommended update cursor:
+detail.gl.update_dt
+
+Recommended sync:
+1. Fetch MR list for the candidate date range.
+2. For each mr_id, call retrieve_mr.php.
+3. Read detail.gl.update_dt.
+4. Sync the document when update_dt is newer than last_sync_at.
+
+
+GR update detection
+-------------------
+Document type: GR
+Main id field: receive_id
+
+List endpoint:
+POST /application/ics/api/engine-receive/search_receive.php
+
+Detail endpoint:
+POST /application/ics/api/engine-receive/retrieve_receive.php
+
+Detail request body:
+json={"company_id":"<company_id>","passkey":"<passkey>","id":"<receive_id>"}
+
+Important fields found:
+- List response has date, status, editing, updater_id, approve_date.
+- List response does not provide a useful update timestamp.
+- Detail response contains gl.update_dt.
+- Detail response contains gl.create_dt.
+- Detail response contains gl.updater_id.
+
+Recommended update cursor:
+detail.gl.update_dt
+
+Recommended sync:
+1. Fetch GR list for the candidate date range.
+2. For each receive_id, call retrieve_receive.php.
+3. Read detail.gl.update_dt.
+4. Sync the document when update_dt is newer than last_sync_at.
+
+
+INC update detection
+--------------------
+Document type: INC
+Main id field: document_id
+
+List endpoint:
+POST /application/ordermgmt_po/api/engine-cargo/cargo_search_keyword.php
+
+Detail endpoint:
+POST /application/ordermgmt_po/api/engine-cargo/show_detail.php
+
+Important fields found:
+- List response has issue_date, order_date, status, modstatus.
+- Detail response has head and detail.
+- No gl section was found.
+- No update_dt or useful update timestamp was found in the current list/detail endpoints.
+
+Recommended update detection:
+content_hash
+
+Recommended sync:
+1. Fetch INC list for today and a rolling lookback window.
+2. Suggested rolling window: 7 to 14 days.
+3. For each document_id, call show_detail.php.
+4. Normalize the full detail payload.
+5. Calculate a stable content hash, for example SHA-256 over sorted JSON.
+6. Sync the document when the hash differs from the last stored hash.
+
+
+Small detail endpoints
+----------------------
+MR small endpoint:
+POST /application/ics/api/engine-mr/retrieve_mr_small.php
+
+GR small endpoint:
+POST /application/ics/api/engine-receive/retrieve_receive_small.php
+
+Working request format:
+form-urlencoded with company_id, passkey, id
+
+Result:
+- These endpoints return create_by and update_by names.
+- They do not return a useful update timestamp.
+- They are not suitable as the update cursor.
+
+
+Overall sync design
+-------------------
+Initial backfill:
+1. Fetch all historical MR, GR, INC documents.
+2. Store normalized documents.
+3. Store source update cursor when available.
+4. Store content_hash for every document.
+
+Continuous sync:
+1. Run a frequent poller.
+2. For MR and GR, fetch candidate list and read detail.gl.update_dt.
+3. For INC, fetch rolling window and compare content_hash.
+4. Store first_seen_at, last_seen_at, last_changed_at, source_update_dt, and content_hash.
+
+Nightly reconciliation:
+1. Re-scan a wider window, such as 3 to 6 months.
+2. This catches old documents edited after their issue date.
+3. For INC, rely on hash comparison.
+
+
+Recommended database fields
+---------------------------
+doc_type
+doc_id
+doc_ref
+issue_date
+source_created_at
+source_updated_at
+content_hash
+first_seen_at
+last_seen_at
+last_changed_at
+sync_status
+raw_gcs_uri
+
+
+Practical conclusion
+--------------------
+MR and GR can use detail.gl.update_dt as the update cursor.
+INC does not expose an update timestamp in the endpoints checked so far, so it
+should use rolling-window polling plus content_hash comparison.

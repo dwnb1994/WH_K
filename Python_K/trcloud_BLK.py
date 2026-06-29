@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 import sys
 import html
@@ -11,6 +11,7 @@ from typing import Optional
 from datetime import datetime
 
 from trcloud_auth import get_cookie_for_company
+from trcloud_env import env
 
 # บังคับ console ให้เป็น UTF-8 (กัน UnicodeEncodeError จากภาษาไทย/emoji บน Windows cp1252)
 for _stream in (sys.stdout, sys.stderr):
@@ -25,13 +26,13 @@ for _stream in (sys.stdout, sys.stderr):
 DATE_FROM = "2025-01-01"
 DATE_TO   = "2026-06-30"
 
-COMPANY_ID = "14"
-PASSKEY    = os.getenv("TRCLOUD_PASSKEY", "")
+COMPANY_ID = env("TRCLOUD_COMPANY_ID", "14")
+PASSKEY    = env("TRCLOUD_PASSKEY", "")
 
 # passkey ของบริษัทเดิม (25) ที่ใช้ตอน switch — ไม่ใช้ยิง API
-_ORIGIN_PASSKEY = os.getenv("TRCLOUD_ORIGIN_PASSKEY", "")
+_ORIGIN_PASSKEY = env("TRCLOUD_ORIGIN_PASSKEY", "")
 
-DEFAULT_RAW_COOKIE = get_cookie_for_company(COMPANY_ID, origin_passkey=_ORIGIN_PASSKEY)
+DEFAULT_RAW_COOKIE = ""
 
 OUTPUT_DIR = r"D:\Users\jacki\OneDrive\Desktop\MWM1"
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -453,6 +454,9 @@ if __name__ == "__main__":
                         help='รูปแบบไฟล์ผลลัพธ์ (default: json)')
     parser.add_argument('--output', default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+
+    if not args.cookie:
+        args.cookie = get_cookie_for_company(args.company_id, origin_passkey=_ORIGIN_PASSKEY)
 
     fetcher = TRCloudBillFetcher(args.company_id, args.passkey, args.cookie)
 

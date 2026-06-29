@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 TRCloud INC — รับสินค้าเข้าคลังโดยดึงเอกสาร PO (Cargo / Goods Receipt from PO)
 =============================================================================
@@ -25,7 +25,7 @@ DEFAULT_OUTPUT = os.path.join(_API_DATA, "inc.json")
 DATE_FROM = "2026-01-01"
 DATE_TO   = "2026-12-31"
 
-COMPANY_ID = "14"
+COMPANY_ID = os.getenv("TRCLOUD_COMPANY_ID", "14")
 PASSKEY    = os.getenv("TRCLOUD_PASSKEY", "")
 _ORIGIN_PASSKEY = os.getenv("TRCLOUD_ORIGIN_PASSKEY", "")
 # ============================================================
