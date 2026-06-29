@@ -12,7 +12,7 @@ from typing import Any
 
 import requests
 
-BASE_URL = "https://thaidrill.trcloud.co"
+from trcloud_config import BASE_URL
 
 
 def b64(value: str) -> str:

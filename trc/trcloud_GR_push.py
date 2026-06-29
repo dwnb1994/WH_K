@@ -19,6 +19,7 @@ from datetime import date
 from typing import Any
 
 from trcloud_auth import get_cookie, get_cookie_for_company
+from trcloud_config import COMPANY_ID, ORIGIN_PASSKEY, PASSKEY, USE_COMPANY_SWITCH
 from trcloud_push_base import (
     BASE_URL,
     auth_fields,
@@ -35,11 +36,6 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(encoding="utf-8")
     except Exception:
         pass
-
-COMPANY_ID = "25"
-PASSKEY = "6a05946b357765415b4c931d2122a8c8"
-USE_COMPANY_SWITCH = False
-ORIGIN_PASSKEY = PASSKEY
 
 API_SAVE = f"{BASE_URL}/application/ics/api/engine-receive/edit_receive.php"
 REFERER = f"{BASE_URL}/application/ics/receive.php"

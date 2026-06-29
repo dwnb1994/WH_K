@@ -22,6 +22,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 from trcloud_auth import get_cookie
+from trcloud_config import COMPANY_ID, DATE_FROM, DATE_TO, OUTPUT_DIR, PASSKEY
 
 # บังคับ console ให้เป็น UTF-8 (กัน UnicodeEncodeError จากภาษาไทย/emoji บน Windows cp1252)
 for _stream in (sys.stdout, sys.stderr):
@@ -31,29 +32,20 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 # =============================================================================
-# CONFIG — แก้ตรงนี้ก่อนรัน
-# -----------------------------------------------------------------------------
-# หมายเหตุ: ค่าทั้งหมดตั้งตรงนี้ (ตรงกับ trcloud_runner.py)
-#          ถ้ารันผ่าน runner ค่าเหล่านี้จะถูก inject ทับให้อัตโนมัติ
+# CONFIG — ค่าจาก .env (ดู trcloud_config.py / .env.example)
 # =============================================================================
-DATE_FROM = "2026-01-01"
-DATE_TO   = "2026-05-31"
 
-# Cookie จาก auto-login (username/password ใน trcloud_auth.py)
+# Cookie จาก auto-login (credentials ใน .env)
 COOKIE = get_cookie()
-
-COMPANY_ID = "25"
-PASSKEY    = "6a05946b357765415b4c931d2122a8c8"
 
 SLEEP_SECONDS   = 0.15   # หน่วงระหว่างหน้า (pagination)
 MAX_WORKERS     = 8      # จำนวน request พร้อมกันตอนดึง detail
 INCLUDE_DETAILS = True
-OUTPUT_DIR      = r"C:\Users\Lenovo\Music\Python\Full Excel"
 
 # JSON สำหรับ Warehouse API / Web / App (อ่านโดย NestJS)
 OUTPUT_JSON_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "warehouse-app", "apps", "api", "data",
+    "apps", "api", "data",
 )
 
 # =============================================================================

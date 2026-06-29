@@ -28,6 +28,7 @@ from datetime import date
 from typing import Any
 
 from trcloud_auth import get_cookie, get_cookie_for_company
+from trcloud_config import COMPANY_ID, ORIGIN_PASSKEY, PASSKEY, USE_COMPANY_SWITCH
 from trcloud_push_base import (
     BASE_URL,
     auth_fields,
@@ -45,17 +46,12 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-COMPANY_ID = "25"
-PASSKEY = "6a05946b357765415b4c931d2122a8c8"
-USE_COMPANY_SWITCH = False
-ORIGIN_PASSKEY = PASSKEY
-
 API_CREATE = f"{BASE_URL}/application/ordermgmt_po/api/engine-cargo/create_cargo.php"
 API_PO_RETRIEVE = f"{BASE_URL}/application/expense/api/engine-po/retrieve_po.php"
 API_PO_LIST = f"{BASE_URL}/application/expense/api/engine-po/po_search_keyword.php"
 PO_JSON_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "warehouse-app", "apps", "api", "data", "po.json",
+    "apps", "api", "data", "po.json",
 )
 
 

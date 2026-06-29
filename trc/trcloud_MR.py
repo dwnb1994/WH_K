@@ -24,6 +24,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.adapters import HTTPAdapter
 
 from trcloud_auth import get_cookie, get_cookie_for_company
+from trcloud_config import (
+    COMPANY_ID, DATE_FROM, DATE_TO, ORIGIN_PASSKEY,
+    OUTPUT_DIR, PASSKEY, USE_COMPANY_SWITCH,
+)
 
 for _stream in (sys.stdout, sys.stderr):
     try:
@@ -32,16 +36,8 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 # =============================================================================
-# CONFIG
+# CONFIG — ค่าจาก .env
 # =============================================================================
-DATE_FROM = "2026-01-01"
-DATE_TO   = "2026-06-30"
-
-COMPANY_ID = "25"
-PASSKEY    = "6a05946b357765415b4c931d2122a8c8"
-# ถ้าต้อง switch บริษัท (เช่น 14 ครัวสำรับลาว) ตั้ง USE_COMPANY_SWITCH=True
-USE_COMPANY_SWITCH = False
-ORIGIN_PASSKEY     = "6a05946b357765415b4c931d2122a8c8"
 
 COOKIE = (
     get_cookie_for_company(COMPANY_ID, origin_passkey=ORIGIN_PASSKEY)
@@ -52,10 +48,9 @@ COOKIE = (
 SLEEP_SECONDS   = 0.15
 MAX_WORKERS     = 8
 INCLUDE_DETAILS = True
-OUTPUT_DIR      = r"C:\Users\Lenovo\Music\Python\Full Excel"
 OUTPUT_JSON_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "warehouse-app", "apps", "api", "data",
+    "apps", "api", "data",
 )
 
 BASE_URL = "https://thaidrill.trcloud.co/application"
