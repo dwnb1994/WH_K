@@ -108,7 +108,7 @@ gcloud run jobs update $JobName `
   --cpu 1 `
   --task-timeout 3600 `
   --max-retries 1 `
-  --set-env-vars "GCP_PROJECT_ID=$ProjectId,TZ=Asia/Bangkok,TRCLOUD_TIMEZONE=Asia/Bangkok,TRCLOUD_GCS_BUCKET=$Bucket,TRCLOUD_RELOAD_TOPIC=$TopicName,TRCLOUD_COMPANY_ID=14,TRCLOUD_USE_COMPANY_SWITCH=true,TRCLOUD_SCAN_FROM=2026-01-01" `
+  --set-env-vars "GCP_PROJECT_ID=$ProjectId,TZ=Asia/Bangkok,TRCLOUD_TIMEZONE=Asia/Bangkok,TRCLOUD_GCS_BUCKET=$Bucket,TRCLOUD_RELOAD_TOPIC=$TopicName,TRCLOUD_COMPANY_ID=14,TRCLOUD_USE_COMPANY_SWITCH=true,TRCLOUD_SCAN_FROM=2026-01-01,TRCLOUD_PROJECT=TN" `
   --set-secrets "TRCLOUD_ERP_URL=trcloud-erp-url:latest,TRCLOUD_USERNAME=trcloud-username:latest,TRCLOUD_PASSWORD=trcloud-password:latest,TRCLOUD_DEVICE_ID=trcloud-device-id:latest,TRCLOUD_PASSKEY=trcloud-company-passkey:latest,TRCLOUD_ORIGIN_PASSKEY=trcloud-origin-passkey:latest"
 
 if (Test-GcloudCommand -CommandArgs @("scheduler", "jobs", "describe", $SchedulerName, "--location", $Region)) {

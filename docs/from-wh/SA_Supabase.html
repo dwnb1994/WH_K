@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Warehouse App — System Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brand:    oklch(0.515 0.155 257);
+    --brand-d:  oklch(0.38 0.12 257);
+    --brand-dd: oklch(0.24 0.09 258);
+    --brand-l:  oklch(0.955 0.022 256);
+    --in:       oklch(0.55 0.115 159);
+    --in-l:     oklch(0.95 0.045 160);
+    --out:      oklch(0.62 0.155 52);
+    --out-l:    oklch(0.96 0.06 66);
+    --warn:     oklch(0.64 0.155 62);
+    --warn-l:   oklch(0.96 0.06 72);
+    --purple:   oklch(0.56 0.16 295);
+    --purple-l: oklch(0.96 0.03 295);
+    --teal:     oklch(0.58 0.11 195);
+    --teal-l:   oklch(0.96 0.04 195);
+    --red:      oklch(0.56 0.175 25);
+    --red-l:    oklch(0.96 0.04 25);
+    --ink:      oklch(0.22 0.025 258);
+    --ink-2:    oklch(0.42 0.022 258);
+    --ink-3:    oklch(0.60 0.018 258);
+    --line:     oklch(0.92 0.008 256);
+    --line-2:   oklch(0.86 0.012 256);
+    --bg:       oklch(0.975 0.006 252);
+    --surface:  #fff;
+    --chip:     oklch(0.958 0.007 254);
+    --mono: 'IBM Plex Mono', monospace;
+    --ui: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; }
+  body { font-family: var(--ui); background: var(--bg); color: var(--ink); line-height: 1.5; }
+  
+  a { color: var(--brand); text-decoration: none; }
+
+  /* ── Layout ── */
+  .page { max-width: 1160px; margin: 0 auto; padding: 40px 28px 80px; }
+  
+  /* ── Cover ── */
+  .cover {
+    background: linear-gradient(135deg, var(--brand-dd) 0%, var(--brand-d) 55%, oklch(0.42 0.14 240) 100%);
+    border-radius: 20px; padding: 52px 52px 48px; color: #fff; margin-bottom: 36px;
+    position: relative; overflow: hidden;
+  }
+  .cover::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 1px, transparent 1px 28px);
+  }
+  .cover-tag { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.55); margin-bottom: 12px; }
+  .cover-title { font-size: 36px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+  .cover-sub { font-size: 16px; color: rgba(255,255,255,.7); margin-top: 8px; font-weight: 500; }
+  .cover-chips { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+  .cover-chip { background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.22); border-radius: 99px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.9); font-family: var(--mono); }
+  .cover-meta { position: absolute; top: 44px; right: 52px; text-align: right; }
+  .cover-ver { font-family: var(--mono); font-size: 12px; color: rgba(255,255,255,.4); }
+  .cover-date { font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.6); margin-top: 4px; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 36px; }
+  .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid var(--line); }
+  .section-num { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--brand); background: var(--brand-l); border-radius: 7px; padding: 3px 9px; }
+  .section-title { font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+  .section-sub { font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+
+  /* ── Cards ── */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .card-sm { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+
+  /* ── Platform matrix ── */
+  .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .platform-card { border-radius: 16px; padding: 22px 20px; position: relative; overflow: hidden; }
+  .platform-card::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 1px, transparent 1px 20px); }
+  .platform-pc { background: linear-gradient(135deg, var(--brand-d), var(--brand)); }
+  .platform-tablet { background: linear-gradient(135deg, oklch(0.42 0.12 195), var(--teal)); }
+  .platform-mobile { background: linear-gradient(135deg, oklch(0.44 0.13 159), var(--in)); }
+  .platform-icon { font-size: 32px; margin-bottom: 12px; }
+  .platform-name { font-size: 18px; font-weight: 800; color: #fff; }
+  .platform-role { font-size: 12.5px; color: rgba(255,255,255,.7); margin-top: 3px; }
+  .platform-stack { font-family: var(--mono); font-size: 11px; font-weight: 700; color: rgba(255,255,255,.9); background: rgba(255,255,255,.18); border-radius: 7px; padding: 3px 8px; display: inline-block; margin-top: 10px; }
+  .feature-list { margin-top: 14px; display: flex; flex-direction: column; gap: 5px; }
+  .feature-item { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; color: rgba(255,255,255,.85); }
+  .feature-item::before { content: '✓'; color: rgba(255,255,255,.5); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Arch diagram ── */
+  .arch-diagram { display: flex; flex-direction: column; gap: 0; position: relative; }
+  .arch-layer { border-radius: 14px; padding: 18px 20px; position: relative; }
+  .arch-connector { display: flex; align-items: center; justify-content: center; height: 36px; position: relative; }
+  .arch-connector::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--line-2); transform: translateX(-50%); }
+  .arch-connector-label { background: var(--surface); border: 1.5px solid var(--line-2); border-radius: 99px; padding: 3px 12px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--ink-3); position: relative; z-index: 1; }
+  .arch-layer-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; opacity: .6; }
+  .arch-nodes { display: flex; gap: 12px; flex-wrap: wrap; }
+  .arch-node { flex: 1; min-width: 130px; background: rgba(255,255,255,.9); border: 1px solid rgba(255,255,255,.6); border-radius: 11px; padding: 12px 13px; }
+  .arch-node-tag { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; opacity: .6; text-transform: uppercase; }
+  .arch-node-name { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .arch-node-tech { font-family: var(--mono); font-size: 11px; font-weight: 600; opacity: .6; margin-top: 2px; }
+
+  .layer-client { background: oklch(0.945 0.012 257); border: 1.5px solid oklch(0.87 0.02 257); }
+  .layer-gateway { background: oklch(0.945 0.012 295); border: 1.5px solid oklch(0.87 0.02 295); }
+  .layer-backend { background: oklch(0.945 0.012 220); border: 1.5px solid oklch(0.87 0.02 220); }
+  .layer-db { background: oklch(0.945 0.014 195); border: 1.5px solid oklch(0.87 0.02 195); }
+  .layer-erp { background: oklch(0.945 0.012 52); border: 1.5px solid oklch(0.87 0.02 52); }
+
+  /* ── Monorepo tree ── */
+  .tree { font-family: var(--mono); font-size: 13.5px; line-height: 1.8; }
+  .tree-dir { color: var(--brand); font-weight: 700; }
+  .tree-file { color: var(--ink-2); }
+  .tree-comment { color: var(--ink-3); font-style: italic; }
+  .tree-indent1 { padding-left: 20px; }
+  .tree-indent2 { padding-left: 40px; }
+  .tree-indent3 { padding-left: 60px; }
+
+  /* ── Sync flow ── */
+  .sync-flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; align-items: start; }
+  .sync-step { text-align: center; }
+  .sync-box { border-radius: 12px; padding: 14px 10px; }
+  .sync-arrow { display: flex; align-items: center; justify-content: center; padding-top: 20px; color: var(--line-2); font-size: 22px; }
+  .sync-label { font-size: 12px; font-weight: 700; color: var(--ink-2); margin-top: 7px; }
+  .sync-sub { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--chip); }
+  th { text-align: left; padding: 11px 14px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); border-bottom: 2px solid var(--line-2); }
+  td { padding: 11px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .td-mono { font-family: var(--mono); font-size: 12.5px; }
+  .td-tag { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+
+  /* ── Badge ── */
+  .badge { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 7px; }
+  .badge-brand { background: var(--brand-l); color: var(--brand); }
+  .badge-in   { background: var(--in-l); color: var(--in); }
+  .badge-out  { background: var(--out-l); color: var(--out); }
+  .badge-warn { background: var(--warn-l); color: var(--warn); }
+  .badge-purple{ background: var(--purple-l); color: var(--purple); }
+  .badge-teal { background: var(--teal-l); color: var(--teal); }
+  .badge-red  { background: var(--red-l); color: var(--red); }
+
+  /* ── Two-col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  /* ── Code block ── */
+  .code-block { background: oklch(0.18 0.025 258); border-radius: 13px; padding: 18px 20px; overflow-x: auto; }
+  .code-block pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: oklch(0.88 0.02 256); }
+  .code-key   { color: oklch(0.73 0.1 200); }
+  .code-str   { color: oklch(0.77 0.12 155); }
+  .code-num   { color: oklch(0.75 0.12 52); }
+  .code-com   { color: oklch(0.55 0.02 258); font-style: italic; }
+  .code-tag   { color: oklch(0.73 0.1 295); }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1.5px solid var(--line); margin: 28px 0; }
+
+  /* ── KV list ── */
+  .kv-list { display: flex; flex-direction: column; gap: 9px; }
+  .kv { display: flex; gap: 12px; align-items: baseline; }
+  .kv-key { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-3); min-width: 140px; flex-shrink: 0; }
+  .kv-val { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+
+  /* ── Responsive ── */
+  @media (max-width: 780px) {
+    .platform-grid { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+    .three-col { grid-template-columns: 1fr; }
+    .sync-flow { grid-template-columns: 1fr; }
+    .cover { padding: 32px 24px; }
+    .cover-meta { position: static; text-align: left; margin-top: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Cover ── -->
+  <div class="cover">
+    <div class="cover-meta">
+      <div class="cover-ver">v1.0</div>
+      <div class="cover-date">มิถุนายน 2026</div>
+    </div>
+    <div class="cover-tag">System Architecture · Warehouse Management</div>
+    <div class="cover-title">แอปจัดการคลังโรงครัวสินค้า<br/>Multi-Platform Architecture</div>
+    <div class="cover-sub">PC (Online) · Tablet (App) · Mobile Phone (App) · TRCloud ERP Integration</div>
+    <div class="cover-chips">
+      <span class="cover-chip">Expo + React Native</span>
+      <span class="cover-chip">Next.js 14</span>
+      <span class="cover-chip">NestJS</span>
+      <span class="cover-chip">Supabase</span>
+      <span class="cover-chip">Google Cloud Run</span>
+      <span class="cover-chip">TRCloud REST API</span>
+      <span class="cover-chip">Offline-First + SQLite</span>
+    </div>
+  </div>
+
+  <!-- ── 1. Platform Matrix ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <div>
+        <div class="section-title">Platform Matrix</div>
+        <div class="section-sub">แต่ละอุปกรณ์ใช้งานอะไร — ใครใช้ — ฟีเจอร์หลักคืออะไร</div>
+      </div>
+    </div>
+
+    <div class="platform-grid" style="margin-bottom:16px;">
+      <!-- PC -->
+      <div class="platform-card platform-pc" style="position:relative;">
+        <div style="position:relative;z-index:1;">
+          <div class="platform-icon">🖥️</div>
+          <div class="platform-name">PC / Web Browser</div>
+          <div class="platform-role">ผู้จัดการคลังโรงครัว · ฝ่ายจัดซื้อ · ฝ่ายบัญชี</div>
+          <div class="platform-stack">Next.js 14 (App Router)</div>
+          <div class="feature-list">
+            <div class="feature-item">Dashboard ภาพรวม + กราฟรายงาน</div>
+            <div class="feature-item">จัดการ PO / SO ทั้งหมด</div>
+            <div class="feature-item">ตั้งค่า Master data (สินค้า/ซัพพลายเออร์)</div>
+            <div class="feature-item">รายงาน Export Excel/PDF</div>
+            <div class="feature-item">จัดการ User / Permission</div>
+            <div class="feature-item">ดู Sync log + ตรวจ TRCloud errors</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tablet -->
+      <div class="platform-card platform-tablet" style="position:relative;">
+        <div style="position:relative;z-index:1;">
+          <div class="platform-icon">📱</div>
+          <div class="platform-name">Tablet (iPad/Android)</div>
+          <div class="platform-role">หัวหน้าคลังโรงครัว · พนักงานท่ารับ-จ่าย</div>
+          <div class="platform-stack">Expo (React Native)</div>
+          <div class="feature-list">
+            <div class="feature-item">รับเข้า / จ่ายออกเต็มรูปแบบ</div>
+            <div class="feature-item">สแกนบาร์โค้ด / QR Code (กล้องจริง)</div>
+            <div class="feature-item">ดู Pick list แบบ 2 คอลัมน์</div>
+            <div class="feature-item">เช็คสต็อก + ตำแหน่ง bin</div>
+            <div class="feature-item">ออฟไลน์เต็มรูปแบบ (expo-sqlite)</div>
+            <div class="feature-item">พิมพ์ใบรับ / สลิป (Bluetooth)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="platform-card platform-mobile" style="position:relative;">
+        <div style="position:relative;z-index:1;">
+          <div class="platform-icon">📲</div>
+          <div class="platform-name">Mobile Phone</div>
+          <div class="platform-role">พนักงานคลังโรงครัว · พนักงานหน้างาน</div>
+          <div class="platform-stack">Expo (React Native) — same codebase</div>
+          <div class="feature-list">
+            <div class="feature-item">สแกนหยิบของ / รับของอย่างเร็ว</div>
+            <div class="feature-item">ค้นหาสต็อกทันที</div>
+            <div class="feature-item">รับ Push Notification แจ้งเตือน</div>
+            <div class="feature-item">ยืนยันงานง่ายๆ (1-tap confirm)</div>
+            <div class="feature-item">ออฟไลน์เต็มรูปแบบ (expo-sqlite)</div>
+            <div class="feature-item">UI ปรับตาม screen size อัตโนมัติ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- connectivity row -->
+    <div class="three-col">
+      <div class="card-sm" style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">🌐</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;">PC — Online only</div>
+          <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px;">ต้องมีเน็ตเสมอ, ดึงข้อมูลจาก API โดยตรง, ไม่มี local cache</div>
+        </div>
+      </div>
+      <div class="card-sm" style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">📶</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;">Tablet — Offline-first</div>
+          <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px;">ทำงานต่อเมื่อ Wi-Fi ตัด, sync อัตโนมัติตอนกลับมา</div>
+        </div>
+      </div>
+      <div class="card-sm" style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">📡</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;">Mobile — Offline-first</div>
+          <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px;">รองรับ 4G/5G + ออฟไลน์, background sync เมื่อมีสัญญาณ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. System Architecture Diagram ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <div>
+        <div class="section-title">System Architecture</div>
+        <div class="section-sub">ภาพรวมทั้งระบบ — Client → Gateway → Backend → Database → TRCloud</div>
+      </div>
+    </div>
+
+    <div class="arch-diagram">
+      <!-- Client Layer -->
+      <div class="arch-layer layer-client">
+        <div class="arch-layer-title" style="color:var(--brand);">Client Layer — อุปกรณ์ผู้ใช้</div>
+        <div class="arch-nodes">
+          <div class="arch-node" style="border-left:3px solid var(--brand);">
+            <div class="arch-node-tag">PC / Web</div>
+            <div class="arch-node-name">Next.js 14</div>
+            <div class="arch-node-tech">App Router · SSR · React Query</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--teal);">
+            <div class="arch-node-tag">Tablet</div>
+            <div class="arch-node-name">Expo (iPad/Android)</div>
+            <div class="arch-node-tech">expo-sqlite · Zustand · expo-camera</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--in);">
+            <div class="arch-node-tag">Mobile</div>
+            <div class="arch-node-name">Expo (iOS/Android)</div>
+            <div class="arch-node-tech">Same codebase as Tablet · responsive layout</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid oklch(0.7 0.06 258); background:var(--chip);">
+            <div class="arch-node-tag" style="opacity:.5;">Internal</div>
+            <div class="arch-node-name" style="color:var(--ink-3);">Sync Engine</div>
+            <div class="arch-node-tech">Queue manager · offline ops · retry logic</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arch-connector-label">HTTPS · REST JSON · JWT Auth</span>
+      </div>
+
+      <!-- Gateway -->
+      <div class="arch-layer layer-gateway">
+        <div class="arch-layer-title" style="color:var(--purple);">API Gateway — Cloud Run</div>
+        <div class="arch-nodes">
+          <div class="arch-node" style="border-left:3px solid var(--purple);">
+            <div class="arch-node-tag">Auth</div>
+            <div class="arch-node-name">Firebase Auth</div>
+            <div class="arch-node-tech">JWT · Role-based access · Google SSO</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--purple);">
+            <div class="arch-node-tag">Gateway</div>
+            <div class="arch-node-name">NestJS API</div>
+            <div class="arch-node-tech">Rate limit · validate · transform · route</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--purple);">
+            <div class="arch-node-tag">Push</div>
+            <div class="arch-node-name">FCM Notifications</div>
+            <div class="arch-node-tech">แจ้งเตือนสต็อกต่ำ · งานใหม่ · sync error</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arch-connector-label">Internal gRPC / REST</span>
+      </div>
+
+      <!-- Backend Services -->
+      <div class="arch-layer layer-backend">
+        <div class="arch-layer-title" style="color:var(--brand);">Backend Services — Google Cloud Run (Containerized)</div>
+        <div class="arch-nodes">
+          <div class="arch-node" style="border-left:3px solid var(--brand);">
+            <div class="arch-node-tag">Service</div>
+            <div class="arch-node-name">Warehouse Service</div>
+            <div class="arch-node-tech">รับเข้า / จ่ายออก / ปรับยอด / สต็อก</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--in);">
+            <div class="arch-node-tag">Service</div>
+            <div class="arch-node-name">Sync Service</div>
+            <div class="arch-node-tech">รับ queue → ส่ง TRCloud → retry → log</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--warn);">
+            <div class="arch-node-tag">Service</div>
+            <div class="arch-node-name">Report Service</div>
+            <div class="arch-node-tech">รายงาน / export / dashboard aggregation</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--out);">
+            <div class="arch-node-tag">Queue</div>
+            <div class="arch-node-name">Cloud Tasks</div>
+            <div class="arch-node-tech">Async offline ops queue · dead-letter retry</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arch-connector-label">Supabase PostgreSQL · Realtime · Auth · Storage</span>
+      </div>
+
+      <!-- Data Layer — Supabase -->
+      <div class="arch-layer layer-db">
+        <div class="arch-layer-title" style="color:var(--teal);">Data Layer — <span style="background:rgba(62,207,142,.25);padding:2px 8px;border-radius:5px;font-style:normal;">Supabase</span> (แทน Cloud SQL + Firebase Auth + Redis + Cloud Storage)</div>
+        <div class="arch-nodes">
+          <div class="arch-node" style="border-left:3px solid var(--teal);">
+            <div class="arch-node-tag">Database</div>
+            <div class="arch-node-name">Supabase PostgreSQL</div>
+            <div class="arch-node-tech">Master data · transaction log · RLS per warehouse</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--in);">
+            <div class="arch-node-tag">Realtime</div>
+            <div class="arch-node-name">Supabase Realtime</div>
+            <div class="arch-node-tech">สต็อก live ทุกอุปกรณ์ · WebSocket subscriptions</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--brand);">
+            <div class="arch-node-tag">Auth</div>
+            <div class="arch-node-name">Supabase Auth</div>
+            <div class="arch-node-tech">JWT · Google SSO · Row Level Security</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid oklch(0.5 0.1 30);">
+            <div class="arch-node-tag">Storage</div>
+            <div class="arch-node-name">Supabase Storage</div>
+            <div class="arch-node-tech">รูปสินค้า · ใบรับ PDF · export files</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--purple);">
+            <div class="arch-node-tag">Functions</div>
+            <div class="arch-node-name">Supabase Edge Functions</div>
+            <div class="arch-node-tech">Deno · webhooks · pg_cron jobs</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid oklch(0.5 0.12 280);background:var(--chip);">
+            <div class="arch-node-tag" style="opacity:.5;">GCP</div>
+            <div class="arch-node-name" style="color:var(--ink-3);">Secret Manager</div>
+            <div class="arch-node-tech">TRCloud API key · service account keys</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector">
+        <span class="arch-connector-label">RESTful JSON API · TRCloud Integration Layer</span>
+      </div>
+
+      <!-- TRCloud -->
+      <div class="arch-layer layer-erp">
+        <div class="arch-layer-title" style="color:var(--out);">TRCloud ERP — External System</div>
+        <div class="arch-nodes">
+          <div class="arch-node" style="border-left:3px solid var(--out);">
+            <div class="arch-node-tag">API</div>
+            <div class="arch-node-name">ระบบสต็อก / จัดซื้อ</div>
+            <div class="arch-node-tech">POST รับเข้า · POST จ่ายออก · GET สต็อก</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--out);">
+            <div class="arch-node-tag">API</div>
+            <div class="arch-node-name">ระบบบัญชี / เอกสาร</div>
+            <div class="arch-node-tech">ใบรับสินค้า · ใบเบิก · GR/GI document</div>
+          </div>
+          <div class="arch-node" style="border-left:3px solid var(--out);">
+            <div class="arch-node-tag">Master</div>
+            <div class="arch-node-name">Master Data Sync</div>
+            <div class="arch-node-tech">ดึงรายการสินค้า / ซัพพลายเออร์ / PO จาก TRCloud</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Monorepo Structure ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <div>
+        <div class="section-title">Monorepo Structure</div>
+        <div class="section-sub">โค้ดเบสเดียว แชร์ logic ระหว่าง web + mobile + backend ผ่าน Turborepo</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="code-block">
+        <pre><code><span class="code-com"># ── Turborepo Monorepo ──────────────────────</span>
+<span class="code-tag">warehouse-app/</span>
+├── <span class="code-tag">apps/</span>
+│   ├── <span class="code-tag">web/</span>             <span class="code-com">← Next.js 14 (PC)</span>
+│   │   ├── app/
+│   │   │   ├── (auth)/login/
+│   │   │   ├── dashboard/
+│   │   │   ├── receive/
+│   │   │   ├── dispatch/
+│   │   │   ├── stock/
+│   │   │   ├── reports/
+│   │   │   └── settings/
+│   │   └── components/
+│   │
+│   ├── <span class="code-tag">mobile/</span>          <span class="code-com">← Expo SDK 51 (iOS/Android)</span>
+│   │   ├── app/            <span class="code-com">← Expo Router</span>
+│   │   │   ├── (tabs)/
+│   │   │   ├── receive/
+│   │   │   └── dispatch/
+│   │   ├── components/
+│   │   └── db/             <span class="code-com">← SQLite schema + migrations</span>
+│   │
+│   └── <span class="code-tag">api/</span>             <span class="code-com">← NestJS (Google Cloud Run)</span>
+│       ├── src/
+│       │   ├── warehouse/
+│       │   ├── sync/
+│       │   ├── trcloud/
+│       │   └── reports/
+│       └── Dockerfile
+│
+└── <span class="code-tag">packages/</span>
+    ├── <span class="code-tag">types/</span>           <span class="code-com">← TypeScript types ใช้ร่วมกัน</span>
+    │   ├── warehouse.ts
+    │   ├── trcloud.ts
+    │   └── sync.ts
+    ├── <span class="code-tag">api-client/</span>      <span class="code-com">← Axios wrapper + React Query hooks</span>
+    ├── <span class="code-tag">sync-engine/</span>     <span class="code-com">← Offline queue logic (mobile)</span>
+    └── <span class="code-tag">validators/</span>      <span class="code-com">← Zod schemas (shared validation)</span>
+</code></pre>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card-sm">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px;">📦 packages/types</div>
+          <div class="code-block" style="padding:12px 14px;">
+            <pre style="font-size:11.5px;"><code><span class="code-com">// ใช้ร่วมกันทุก app</span>
+<span class="code-tag">interface</span> <span class="code-key">StockItem</span> {
+  sku:     <span class="code-str">string</span>
+  name:    <span class="code-str">string</span>
+  onHand:  <span class="code-num">number</span>
+  minQty:  <span class="code-num">number</span>
+  bins:    <span class="code-key">BinLocation</span>[]
+}
+
+<span class="code-tag">interface</span> <span class="code-key">SyncEvent</span> {
+  id:        <span class="code-str">string</span>
+  type:      <span class="code-str">'GR' | 'GI' | 'ADJ'</span>
+  payload:   <span class="code-key">unknown</span>
+  status:    <span class="code-str">'pending'|'synced'|'error'</span>
+  createdAt: <span class="code-str">string</span>
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="card-sm">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px;">🔄 packages/sync-engine</div>
+          <div style="font-size:13px;color:var(--ink-2);line-height:1.7;">
+            <div>• เก็บ pending ops ใน SQLite <code style="font-family:var(--mono);font-size:12px;background:var(--chip);padding:1px 5px;border-radius:4px;">sync_queue</code></div>
+            <div>• ตรวจเน็ต → flush queue → ส่ง API</div>
+            <div>• Retry exponential backoff (3 ครั้ง)</div>
+            <div>• Dead-letter → แจ้ง user ด้วย banner</div>
+            <div>• Conflict resolution: last-write-wins</div>
+          </div>
+        </div>
+
+        <div class="card-sm">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px;">⚡ ประโยชน์ Monorepo</div>
+          <div style="font-size:13px;color:var(--ink-2);line-height:1.7;">
+            <div>• แก้ bug ที่เดียว — ใช้ได้ทุก platform</div>
+            <div>• TypeScript type safety ครบทั้ง stack</div>
+            <div>• Deploy พร้อมกันด้วย Turborepo pipeline</div>
+            <div>• ทีมเดียวดูแล web + mobile + api</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. Offline Sync Flow ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <div>
+        <div class="section-title">Offline Sync Flow</div>
+        <div class="section-sub">จากการกดปุ่มบนมือถือ → ถึง TRCloud ERP — ทำงานแม้ไม่มีเน็ต</div>
+      </div>
+    </div>
+
+    <!-- scenario offline -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink-3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.08em;">Scenario A — ออฟไลน์ → ซิงก์ทีหลัง</div>
+      <div class="sync-flow">
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--in-l);border:1.5px solid var(--in);">
+            <div style="font-size:22px;">👆</div>
+            <div style="font-size:13px;font-weight:700;color:var(--in);margin-top:6px;">กด "รับเข้า"</div>
+          </div>
+          <div class="sync-label">พนักงานสแกน + กด</div>
+          <div class="sync-sub">ออฟไลน์ — ไม่มี Wi-Fi</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--brand-l);border:1.5px solid var(--brand);">
+            <div style="font-size:22px;">🗄️</div>
+            <div style="font-size:13px;font-weight:700;color:var(--brand);margin-top:6px;">บันทึก SQLite</div>
+          </div>
+          <div class="sync-label">Local DB + Queue</div>
+          <div class="sync-sub">status: "pending"</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--warn-l);border:1.5px solid var(--warn);">
+            <div style="font-size:22px;">📶</div>
+            <div style="font-size:13px;font-weight:700;color:var(--warn);margin-top:6px;">มีเน็ตแล้ว</div>
+          </div>
+          <div class="sync-label">Sync Engine ตรวจ</div>
+          <div class="sync-sub">ทุก 30 วิ + on-connect</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--purple-l);border:1.5px solid var(--purple);">
+            <div style="font-size:22px;">🖥️</div>
+            <div style="font-size:13px;font-weight:700;color:var(--purple);margin-top:6px;">Backend API</div>
+          </div>
+          <div class="sync-label">Validate + Transform</div>
+          <div class="sync-sub">NestJS · Cloud Run</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--out-l);border:1.5px solid var(--out);">
+            <div style="font-size:22px;">☁️</div>
+            <div style="font-size:13px;font-weight:700;color:var(--out);margin-top:6px;">TRCloud ERP</div>
+          </div>
+          <div class="sync-label">POST /stock/receive</div>
+          <div class="sync-sub">status: "synced" ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- scenario online -->
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink-3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.08em;">Scenario B — ออนไลน์ปกติ (PC หรือมือถือมีเน็ต)</div>
+      <div class="sync-flow">
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--brand-l);border:1.5px solid var(--brand);">
+            <div style="font-size:22px;">🖥️</div>
+            <div style="font-size:13px;font-weight:700;color:var(--brand);margin-top:6px;">Action</div>
+          </div>
+          <div class="sync-label">กด / scan</div>
+          <div class="sync-sub">มีเน็ต — realtime</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--in-l);border:1.5px solid var(--in);">
+            <div style="font-size:22px;">⚡</div>
+            <div style="font-size:13px;font-weight:700;color:var(--in);margin-top:6px;">API call ทันที</div>
+          </div>
+          <div class="sync-label">ข้าม local queue</div>
+          <div class="sync-sub">บันทึก SQLite ด้วย</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--purple-l);border:1.5px solid var(--purple);">
+            <div style="font-size:22px;">🔄</div>
+            <div style="font-size:13px;font-weight:700;color:var(--purple);margin-top:6px;">Backend</div>
+          </div>
+          <div class="sync-label">Process + validate</div>
+          <div class="sync-sub">&lt; 300ms response</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--out-l);border:1.5px solid var(--out);">
+            <div style="font-size:22px;">☁️</div>
+            <div style="font-size:13px;font-weight:700;color:var(--out);margin-top:6px;">TRCloud</div>
+          </div>
+          <div class="sync-label">POST ทันที</div>
+          <div class="sync-sub">realtime mode</div>
+        </div>
+        <div class="sync-arrow">→</div>
+        <div class="sync-step">
+          <div class="sync-box" style="background:var(--in-l);border:1.5px solid var(--in);">
+            <div style="font-size:22px;">✅</div>
+            <div style="font-size:13px;font-weight:700;color:var(--in);margin-top:6px;">UI อัปเดต</div>
+          </div>
+          <div class="sync-label">สต็อกใหม่แสดงทันที</div>
+          <div class="sync-sub">Optimistic update</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. TRCloud Integration ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <div>
+        <div class="section-title">TRCloud Integration Layer</div>
+        <div class="section-sub">ข้อมูลที่แอปส่งไป TRCloud — format JSON ตาม API doc ของ TRCloud</div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-bottom:16px;">
+      <div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:10px;">POST — รับเข้าสินค้า (Goods Receipt)</div>
+        <div class="code-block">
+          <pre><code><span class="code-com">// POST https://[company].trcloud.co/api/stock/gr</span>
+{
+  <span class="code-key">"doc_type"</span>:     <span class="code-str">"GR"</span>,
+  <span class="code-key">"po_ref"</span>:       <span class="code-str">"PO-2406-018"</span>,
+  <span class="code-key">"warehouse_id"</span>: <span class="code-str">"DC-BKK"</span>,
+  <span class="code-key">"received_by"</span>:  <span class="code-str">"user-uuid-xxx"</span>,
+  <span class="code-key">"received_at"</span>:  <span class="code-str">"2026-06-19T13:42:00+07:00"</span>,
+  <span class="code-key">"lines"</span>: [
+    {
+      <span class="code-key">"sku"</span>:     <span class="code-str">"FX-1180"</span>,
+      <span class="code-key">"qty"</span>:     <span class="code-num">40</span>,
+      <span class="code-key">"bin"</span>:     <span class="code-str">"C-04-11"</span>,
+      <span class="code-key">"unit"</span>:    <span class="code-str">"กล่อง"</span>,
+      <span class="code-key">"lot"</span>:     <span class="code-str">"LOT-2026-06"</span>
+    }
+  ],
+  <span class="code-key">"offline_id"</span>:  <span class="code-str">"sync-uuid-yyy"</span> <span class="code-com">// idempotency key</span>
+}</code></pre>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:10px;">POST — จ่ายออก (Goods Issue)</div>
+        <div class="code-block">
+          <pre><code><span class="code-com">// POST https://[company].trcloud.co/api/stock/gi</span>
+{
+  <span class="code-key">"doc_type"</span>:    <span class="code-str">"GI"</span>,
+  <span class="code-key">"so_ref"</span>:      <span class="code-str">"SO-2406-204"</span>,
+  <span class="code-key">"dest"</span>:        <span class="code-str">"สาขารังสิต"</span>,
+  <span class="code-key">"kind"</span>:        <span class="code-str">"TRANSFER"</span>,
+  <span class="code-key">"issued_by"</span>:   <span class="code-str">"user-uuid-xxx"</span>,
+  <span class="code-key">"issued_at"</span>:   <span class="code-str">"2026-06-19T09:30:00+07:00"</span>,
+  <span class="code-key">"lines"</span>: [
+    {
+      <span class="code-key">"sku"</span>:    <span class="code-str">"TL-0241"</span>,
+      <span class="code-key">"qty"</span>:    <span class="code-num">6</span>,
+      <span class="code-key">"bin"</span>:    <span class="code-str">"A-01-03"</span>,
+      <span class="code-key">"unit"</span>:   <span class="code-str">"เครื่อง"</span>
+    }
+  ],
+  <span class="code-key">"offline_id"</span>: <span class="code-str">"sync-uuid-zzz"</span>
+}</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-sm" style="background:var(--warn-l);border-color:var(--warn);">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--warn);margin-bottom:4px;">ต้องตรวจสอบกับ TRCloud ก่อน</div>
+          <div style="font-size:13px;color:var(--ink-2);line-height:1.6;">Field name, endpoint URL, และ Auth method อาจต่างกันตาม TRCloud version/edition ที่ใช้อยู่ ขอ <strong>API Documentation</strong> และ <strong>Sandbox credentials</strong> จาก TRCloud ก่อนเริ่ม develop integration layer · ติดต่อ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8ae3e4ece5cafef8e9e6e5ffeea4e9e5">[email&#160;protected]</a> หรือโทร 02-370-1250</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. Supabase + Google Cloud ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <div>
+        <div class="section-title">Supabase + Google Cloud Services</div>
+        <div class="section-sub">Supabase รับผิดชอบ Data layer ทั้งหมด — Google Cloud Run รัน NestJS สำหรับ TRCloud integration</div>
+      </div>
+    </div>
+
+    <!-- Supabase block -->
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:oklch(0.52 0.18 162);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">S</div>
+        <div style="font-weight:800;font-size:16px;">Supabase</div>
+        <span class="badge badge-in">แทน Cloud SQL + Firebase Auth + Redis + Cloud Storage</span>
+        <span class="badge" style="background:oklch(0.95 0.04 162);color:oklch(0.42 0.16 162);margin-left:auto;">Free 500MB · Pro $25/เดือน</span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;border:1.5px solid oklch(0.86 0.05 162);">
+        <table>
+          <thead style="background:oklch(0.96 0.03 162);">
+            <tr>
+              <th>Supabase Service</th>
+              <th>แทนอะไรเดิม</th>
+              <th>หน้าที่ในระบบ</th>
+              <th>ราคา</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Supabase Database</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">PostgreSQL 15 + RLS</span></td>
+              <td><span class="badge badge-warn" style="font-size:11px;">Cloud SQL ❌</span></td>
+              <td style="font-size:13px;">ฐานข้อมูลหลัก · master data · transaction log · sync queue · Row Level Security ต่อ warehouse</td>
+              <td><span class="badge badge-in">รวมใน plan</span></td>
+            </tr>
+            <tr>
+              <td><strong>Supabase Auth</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">JWT + OAuth2</span></td>
+              <td><span class="badge badge-warn" style="font-size:11px;">Firebase Auth ❌</span></td>
+              <td style="font-size:13px;">Login · Google SSO · JWT · RLS ผูกกับ user_id อัตโนมัติ · middleware Next.js + Expo</td>
+              <td><span class="badge badge-in">รวมใน plan</span></td>
+            </tr>
+            <tr>
+              <td><strong>Supabase Realtime</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">WebSocket subscriptions</span></td>
+              <td><span class="badge badge-warn" style="font-size:11px;">Redis Pub/Sub ❌</span></td>
+              <td style="font-size:13px;">สต็อกอัปเดต live ทุกอุปกรณ์ทันที เมื่อ PC หรือมือถือ sync เสร็จ · subscribe ตาม warehouse_id</td>
+              <td><span class="badge badge-in">รวมใน plan</span></td>
+            </tr>
+            <tr>
+              <td><strong>Supabase Storage</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">S3-compatible</span></td>
+              <td><span class="badge badge-warn" style="font-size:11px;">Cloud Storage ❌</span></td>
+              <td style="font-size:13px;">รูปสินค้า · ใบรับสินค้า PDF · export files · เข้าถึงผ่าน signed URL</td>
+              <td><span class="badge badge-in">ฟรี 1GB</span></td>
+            </tr>
+            <tr>
+              <td><strong>Supabase Edge Functions</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">Deno Deploy</span></td>
+              <td><span class="badge badge-teal" style="font-size:11px;">เพิ่มเติม ✨</span></td>
+              <td style="font-size:13px;">Webhook รับ TRCloud callbacks · trigger แจ้งเตือนสต็อกต่ำ · pg_cron scheduled jobs</td>
+              <td><span class="badge badge-in">ฟรี 500k req</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Google Cloud remaining -->
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="width:30px;height:30px;border-radius:8px;background:var(--brand);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">G</div>
+        <div style="font-weight:800;font-size:16px;">Google Cloud</div>
+        <span class="badge badge-brand">เหลือแค่ Cloud Run + ส่วนเสริม</span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>บริการ</th>
+              <th>หน้าที่ในระบบ</th>
+              <th>ราคา/เดือน</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Cloud Run</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">NestJS + Docker</span></td>
+              <td style="font-size:13px;">รัน NestJS — TRCloud integration, sync service, report service · auto-scale 0→N</td>
+              <td><span class="badge badge-in">~$5–15</span></td>
+              <td><span class="badge badge-red">จำเป็น</span></td>
+            </tr>
+            <tr>
+              <td><strong>Cloud Tasks</strong><br/><span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);">Async queue</span></td>
+              <td style="font-size:13px;">Queue offline ops จากมือถือ → retry อัตโนมัติ → ส่งต่อ TRCloud</td>
+              <td><span class="badge badge-in">~$1–3</span></td>
+              <td><span class="badge badge-brand">แนะนำ</span></td>
+            </tr>
+            <tr>
+              <td><strong>Secret Manager</strong></td>
+              <td style="font-size:13px;">เก็บ TRCloud API key · Supabase service_role key · JWT secret</td>
+              <td><span class="badge badge-in">~$1</span></td>
+              <td><span class="badge badge-red">จำเป็น</span></td>
+            </tr>
+            <tr>
+              <td><strong>Cloud Monitoring</strong></td>
+              <td style="font-size:13px;">Logs + alerts สำหรับ Cloud Run errors, TRCloud sync failures</td>
+              <td><span class="badge badge-in">ฟรี tier</span></td>
+              <td><span class="badge badge-brand">แนะนำ</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- cost comparison -->
+    <div class="two-col">
+      <div class="card-sm" style="background:oklch(0.97 0.015 52);border-color:var(--warn);">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">📊 ก่อนใช้ Supabase</div>
+        <div style="display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2);">
+          <div style="display:flex;justify-content:space-between;"><span>Cloud SQL (PostgreSQL)</span><span style="font-family:var(--mono);font-weight:700;">$15–35</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Firebase Auth</span><span style="font-family:var(--mono);font-weight:700;">ฟรี</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cloud Storage</span><span style="font-family:var(--mono);font-weight:700;">$1–5</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cloud Memorystore (Redis)</span><span style="font-family:var(--mono);font-weight:700;">$30</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cloud Run + Tasks + etc.</span><span style="font-family:var(--mono);font-weight:700;">$10–25</span></div>
+          <div style="display:flex;justify-content:space-between;font-weight:800;border-top:1.5px solid var(--line);padding-top:8px;margin-top:4px;font-size:14px;"><span>รวม</span><span style="font-family:var(--mono);color:var(--warn);">~$56–95/เดือน</span></div>
+        </div>
+      </div>
+      <div class="card-sm" style="background:var(--in-l);border-color:var(--in);">
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:10px;">✅ หลังใช้ Supabase</div>
+        <div style="display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2);">
+          <div style="display:flex;justify-content:space-between;"><span>Supabase Pro (DB+Auth+RT+Storage)</span><span style="font-family:var(--mono);font-weight:700;">$25</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cloud Run (NestJS)</span><span style="font-family:var(--mono);font-weight:700;">$5–15</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cloud Tasks + Secret Manager</span><span style="font-family:var(--mono);font-weight:700;">$2–4</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cloud Monitoring</span><span style="font-family:var(--mono);font-weight:700;">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-weight:800;border-top:1.5px solid var(--line);padding-top:8px;margin-top:4px;font-size:14px;"><span>รวม</span><span style="font-family:var(--mono);color:var(--in);">~$32–44/เดือน</span></div>
+        </div>
+        <div style="margin-top:10px;padding:8px 10px;background:var(--in);border-radius:8px;font-size:12.5px;font-weight:700;color:#fff;text-align:center;">💰 ประหยัดได้ ~40–55% ต่อเดือน</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 7. Tech Stack Summary ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">07</span>
+      <div>
+        <div class="section-title">Tech Stack Summary</div>
+        <div class="section-sub">สรุป library และ tool ทุกชั้น</div>
+      </div>
+    </div>
+
+    <div class="three-col">
+      <!-- Web -->
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span style="font-size:20px;">🖥️</span>
+          <div style="font-weight:800;font-size:15px;">Web (PC)</div>
+          <span class="badge badge-brand" style="margin-left:auto;">Next.js 14</span>
+        </div>
+        <div class="kv-list">
+          <div class="kv"><span class="kv-key">Framework</span><span class="kv-val">Next.js 14 App Router</span></div>
+          <div class="kv"><span class="kv-key">Language</span><span class="kv-val">TypeScript 5</span></div>
+          <div class="kv"><span class="kv-key">UI</span><span class="kv-val">Tailwind CSS + shadcn/ui</span></div>
+          <div class="kv"><span class="kv-key">State</span><span class="kv-val">React Query + Zustand</span></div>
+          <div class="kv"><span class="kv-key">Charts</span><span class="kv-val">Recharts</span></div>
+          <div class="kv"><span class="kv-key">Auth</span><span class="kv-val">Supabase Auth + Next.js middleware</span></div>
+          <div class="kv"><span class="kv-key">Deploy</span><span class="kv-val">Vercel หรือ Cloud Run</span></div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span style="font-size:20px;">📱</span>
+          <div style="font-weight:800;font-size:15px;">Mobile + Tablet</div>
+          <span class="badge badge-teal" style="margin-left:auto;">Expo SDK 51</span>
+        </div>
+        <div class="kv-list">
+          <div class="kv"><span class="kv-key">Framework</span><span class="kv-val">Expo SDK 51 + React Native</span></div>
+          <div class="kv"><span class="kv-key">Navigation</span><span class="kv-val">Expo Router v3</span></div>
+          <div class="kv"><span class="kv-key">Local DB</span><span class="kv-val">expo-sqlite + Drizzle ORM</span></div>
+          <div class="kv"><span class="kv-key">State</span><span class="kv-val">Zustand</span></div>
+          <div class="kv"><span class="kv-key">Scan</span><span class="kv-val">expo-camera + expo-barcode-scanner</span></div>
+          <div class="kv"><span class="kv-key">Push</span><span class="kv-val">expo-notifications + FCM</span></div>
+          <div class="kv"><span class="kv-key">Deploy</span><span class="kv-val">Expo EAS Build (APK/IPA)</span></div>
+        </div>
+      </div>
+
+      <!-- Backend -->
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span style="font-size:20px;">⚙️</span>
+          <div style="font-weight:800;font-size:15px;">Backend API</div>
+          <span class="badge badge-purple" style="margin-left:auto;">NestJS</span>
+        </div>
+        <div class="kv-list">
+          <div class="kv"><span class="kv-key">Framework</span><span class="kv-val">NestJS 10 (Node.js)</span></div>
+          <div class="kv"><span class="kv-key">Language</span><span class="kv-val">TypeScript 5</span></div>
+          <div class="kv"><span class="kv-key">ORM</span><span class="kv-val">Prisma 5</span></div>
+          <div class="kv"><span class="kv-key">Validation</span><span class="kv-val">Zod + class-validator</span></div>
+          <div class="kv"><span class="kv-key">Queue</span><span class="kv-val">BullMQ + Cloud Tasks</span></div>
+          <div class="kv"><span class="kv-key">Docs</span><span class="kv-val">Swagger / OpenAPI 3</span></div>
+          <div class="kv"><span class="kv-key">Deploy</span><span class="kv-val">Docker → Cloud Run</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 8. Dev Timeline ── -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">08</span>
+      <div>
+        <div class="section-title">แนวทางการพัฒนา (Phased Approach)</div>
+        <div class="section-sub">แบ่งเป็น 3 phase — เริ่มเร็ว ค่อยๆ เพิ่มฟีเจอร์</div>
+      </div>
+    </div>
+
+    <div class="three-col">
+      <div class="card" style="border-top:4px solid var(--in);">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--in);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Phase 1 — MVP (6–8 สัปดาห์)</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:12px;">Core Warehouse App</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:var(--ink-2);">
+          <div>✓ Expo mobile + Expo Router</div>
+          <div>✓ รับเข้า + จ่ายออก + สแกน</div>
+          <div>✓ SQLite offline + sync engine</div>
+          <div>✓ NestJS backend บน Cloud Run</div>
+          <div>✓ PostgreSQL + Firebase Auth</div>
+          <div>✓ TRCloud GR/GI integration</div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3);">👥 ทีม: 2 dev (mobile+backend)</div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--brand);">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--brand);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Phase 2 — Web + Reports (4–6 สัปดาห์)</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:12px;">PC Dashboard</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:var(--ink-2);">
+          <div>✓ Next.js web app (PC)</div>
+          <div>✓ Dashboard + กราฟรายงาน</div>
+          <div>✓ Master data management</div>
+          <div>✓ User / Permission management</div>
+          <div>✓ Export Excel / PDF</div>
+          <div>✓ Sync log + TRCloud error monitor</div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3);">👥 ทีม: +1 frontend dev</div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--purple);">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Phase 3 — Advanced (4–6 สัปดาห์)</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:12px;">Smart Features</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:var(--ink-2);">
+          <div>✓ Push notification (แจ้งเตือน)</div>
+          <div>✓ พิมพ์ใบรับ Bluetooth printer</div>
+          <div>✓ AI สแกนเอกสารใบสั่งซื้อ</div>
+          <div>✓ Stock forecast แจ้งสั่งซื้อ</div>
+          <div>✓ Multi-warehouse support</div>
+          <div>✓ Audit trail + e-signature</div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3);">👥 ทีม: ทีมเดิม + QA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <hr class="divider" />
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div style="font-size:13px;color:var(--ink-3);">แอปจัดการคลังโรงครัวสินค้า · System Architecture v1.0 · มิถุนายน 2026</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="badge badge-brand">Expo + React Native</span>
+      <span class="badge badge-teal">Next.js 14</span>
+      <span class="badge badge-purple">NestJS</span>
+      <span class="badge badge-in">Supabase</span>
+      <span class="badge badge-brand">Google Cloud Run</span>
+      <span class="badge badge-out">TRCloud API</span>
+    </div>
+  </div>
+
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

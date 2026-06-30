@@ -111,6 +111,27 @@ def _pick(*vals: Any) -> Any:
     return ''
 
 
+def project_matches(project: str, filter_text: str) -> bool:
+    """Match project code by prefix (case-insensitive), e.g. TN → TN-658."""
+    if not filter_text:
+        return True
+    proj = (project or "").strip().upper()
+    filt = filter_text.strip().upper()
+    return bool(proj) and proj.startswith(filt)
+
+
+def filter_records_by_project(records: list, filter_text: str, doc_name: str = "") -> list:
+    if not filter_text or not records:
+        return records
+    kept = [r for r in records if project_matches(r.get("project"), filter_text)]
+    dropped = len(records) - len(kept)
+    label = doc_name or "เอกสาร"
+    print(f"🔎 {label}: กรองโครงการ {filter_text} → เหลือ {len(kept)} จาก {len(records)} รายการ")
+    if dropped:
+        print(f"   (ตัดออก {dropped} รายการที่ไม่ใช่โครงการ {filter_text})")
+    return kept
+
+
 def _clean_records(records: list) -> list:
     out = []
     for row in records:
@@ -599,7 +620,8 @@ class TRCloudICSFetcher:
     def build_json_payload(self, records: list, items: list,
                            date_from: str, date_to: str,
                            detail_heads: Optional[dict] = None,
-                           company_id: str = '') -> dict:
+                           company_id: str = '',
+                           project_filter: str = '') -> dict:
         idf = self.cfg.id_field
         raw_stats = self._aggregate_lines(items, idf)
         lines = [self._normalize_line(row) for row in items]
@@ -616,7 +638,7 @@ class TRCloudICSFetcher:
         total_baht = round(sum(o.get('total_value_baht', 0) or 0 for o in orders), 2)
         product_index = self._build_product_index(lines)
 
-        return {
+        payload = {
             'schema_version': JSON_SCHEMA_VERSION,
             'doc_type': self.cfg.name,
             'fetched_at': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
@@ -635,10 +657,14 @@ class TRCloudICSFetcher:
             'lines': lines,
             'product_index': product_index,
         }
+        if project_filter:
+            payload['project_filter'] = project_filter
+        return payload
 
     def export_to_json(self, records: list, items: list, filename: str,
                        date_from: str, date_to: str,
-                       detail_heads: Optional[dict] = None):
+                       detail_heads: Optional[dict] = None,
+                       project_filter: str = ''):
         """บันทึก .json — orders + lines + product_index"""
         if not records and not items:
             print(f"⚠️ {self.cfg.name}: ไม่มีข้อมูลสำหรับบันทึก")
@@ -650,6 +676,7 @@ class TRCloudICSFetcher:
             records, items, date_from, date_to,
             detail_heads=detail_heads,
             company_id=self.company_id,
+            project_filter=project_filter,
         )
         try:
             with open(filename, 'w', encoding='utf-8') as f:
@@ -699,7 +726,7 @@ class TRCloudICSFetcher:
 
 def run_cli(cfg: DocConfig, default_company_id: str, default_passkey: str,
             default_cookie: str, default_output: str,
-            date_from: str, date_to: str):
+            date_from: str, date_to: str, project_filter: str = ""):
     """ตัวช่วยรัน CLI ให้สคริปต์แต่ละชนิดเรียกใช้ซ้ำได้"""
     import argparse
 
@@ -711,6 +738,8 @@ def run_cli(cfg: DocConfig, default_company_id: str, default_passkey: str,
     parser.add_argument('--cookie', default=default_cookie)
     parser.add_argument('--keyword', default='')
     parser.add_argument('--status', default='')
+    parser.add_argument('--project-filter', default=project_filter,
+                        help='กรองเฉพาะโครงการที่ขึ้นต้นด้วยค่านี้ เช่น TN')
     parser.add_argument('--no-details', dest='with_details', action='store_false',
                         help='เอาเฉพาะ List ไม่ดึงรายการสินค้า')
     parser.set_defaults(with_details=True)
@@ -726,6 +755,7 @@ def run_cli(cfg: DocConfig, default_company_id: str, default_passkey: str,
 
     records = fetcher.fetch_list(args.date_from, args.date_to,
                                  keyword=args.keyword, status=args.status)
+    records = filter_records_by_project(records, args.project_filter, cfg.name)
     items = []
     detail_heads = {}
     if args.with_details and records:
@@ -740,4 +770,7 @@ def run_cli(cfg: DocConfig, default_company_id: str, default_passkey: str,
         out = args.output
         if not out.lower().endswith('.json'):
             out = os.path.splitext(out)[0] + '.json'
-        fetcher.export_to_json(records, items, out, args.date_from, args.date_to, detail_heads)
+        fetcher.export_to_json(
+            records, items, out, args.date_from, args.date_to, detail_heads,
+            project_filter=args.project_filter,
+        )

@@ -155,6 +155,23 @@ export interface TrCloudDocListResponse {
 
 export type TrCloudDocLine = Record<string, unknown>
 
+export interface IncStockPosition {
+  id: string
+  product_id: string
+  product_name: string
+  warehouse: string
+  unit: string
+  on_hand: number
+  line_count: number
+  doc_count: number
+}
+
+export interface IncStockListResponse {
+  meta: TrCloudDocMeta
+  summary?: TrCloudDocSummary | null
+  positions: IncStockPosition[]
+}
+
 // ─── Axios instance ────────────────────────────────────────────
 
 let _token = ''
@@ -221,6 +238,9 @@ export const warehouseApi = {
 
   getInboundCargoLines: (documentId: string) =>
     apiClient.get<TrCloudDocLine[]>(`/api/v1/warehouse/inc/${documentId}/lines`).then(r => r.data),
+
+  getIncStock: (params?: { search?: string; limit?: number }) =>
+    apiClient.get<IncStockListResponse>('/api/v1/warehouse/inc/stock', { params }).then(r => r.data),
 
   reloadTrCloudDocs: (kind?: 'gr' | 'mr' | 'inc') =>
     apiClient.post<{ reloaded: string[] }>('/api/v1/warehouse/docs/reload', null, { params: { kind } }).then(r => r.data),

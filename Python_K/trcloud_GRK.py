@@ -1,32 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-TRCloud GR — ใบรับสินค้า (Goods Receive)
-========================================
+TRCloud GRK — ใบรับสินค้า (Goods Receive)
+==========================================
 List   : /application/ics/api/engine-receive/search_receive.php
 Detail : /application/ics/api/engine-receive/retrieve_receive.php → {head, body, gl, ...}
-id     : receive_id   |   title: "GR"   |   create_by: "goods_receive"
-(ยืนยันจาก reverse-engineering ใน K_Wscr_info.txt)
+id     : receive_id
+
+ข้อมูลเป้าหมาย: ครัวสำรองลาว (Company ID 14)
+  login บริษัทต้นทาง (25) → switch เข้า 14
 """
 
 import os
 
 from trcloud_auth import get_cookie_for_company
 from trcloud_commonK import DocConfig, run_cli
+from trcloud_env import env
+from trcloud_paths import API_DATA_DIR
 
 # ============================================================
-# ⚙️  ตั้งค่าหลัก
+# ⚙️  ตั้งค่าหลัก — ครัว company 14
 # ============================================================
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_API_DATA = os.path.join(_SCRIPT_DIR, "..", "WH_K", "warehouse-app", "apps", "api", "data")
-DATA_DIR = os.path.join(_SCRIPT_DIR, "data")
-DEFAULT_OUTPUT = os.path.join(_API_DATA, "gr.json")
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DEFAULT_OUTPUT = os.path.join(API_DATA_DIR, "gr.json")
 
 DATE_FROM = "2026-01-01"
-DATE_TO   = "2026-12-31"
+DATE_TO   = "2026-06-30"
 
-COMPANY_ID = os.getenv("TRCLOUD_COMPANY_ID", "14")
-PASSKEY    = os.getenv("TRCLOUD_PASSKEY", "")
-_ORIGIN_PASSKEY = os.getenv("TRCLOUD_ORIGIN_PASSKEY", "")
+COMPANY_ID = env("TRCLOUD_COMPANY_ID", "14")
+PASSKEY    = env("TRCLOUD_PASSKEY", "")
+_ORIGIN_PASSKEY = env("TRCLOUD_ORIGIN_PASSKEY", "")
+PROJECT_FILTER = env("TRCLOUD_PROJECT", "TN")
 # ============================================================
 
 GR_CONFIG = DocConfig(
@@ -40,4 +43,4 @@ GR_CONFIG = DocConfig(
 
 if __name__ == "__main__":
     cookie = get_cookie_for_company(COMPANY_ID, origin_passkey=_ORIGIN_PASSKEY)
-    run_cli(GR_CONFIG, COMPANY_ID, PASSKEY, cookie, DEFAULT_OUTPUT, DATE_FROM, DATE_TO)
+    run_cli(GR_CONFIG, COMPANY_ID, PASSKEY, cookie, DEFAULT_OUTPUT, DATE_FROM, DATE_TO, PROJECT_FILTER)

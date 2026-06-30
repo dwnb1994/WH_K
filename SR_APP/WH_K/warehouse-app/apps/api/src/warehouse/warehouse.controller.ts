@@ -169,6 +169,19 @@ export class WarehouseController {
     return this.docsSvc.getProductIndex('inc')
   }
 
+  @Get('inc/stock')
+  @ApiOperation({ summary: 'สต็อกคงคลังจาก INC (รวม qty ตาม SKU + คลัง)' })
+  getIncStock(
+    @Query('search') search?: string,
+    @Query('limit') limit = 500,
+  ) {
+    return {
+      meta: this.docsSvc.getMeta('inc'),
+      summary: this.docsSvc.getMeta('inc').summary,
+      positions: this.docsSvc.getIncStockPositions({ search, limit: Number(limit) }),
+    }
+  }
+
   @Get('inc/:documentId/lines')
   @ApiOperation({ summary: 'รายการสินค้าใน INC' })
   getInboundCargoLines(@Param('documentId') documentId: string) {
@@ -178,9 +191,9 @@ export class WarehouseController {
   @Post('docs/reload')
   @HttpCode(200)
   @ApiOperation({ summary: 'โหลด JSON จาก disk ใหม่ (gr/mr/inc)' })
-  reloadDocs(@Query('kind') kind?: 'gr' | 'mr' | 'inc') {
-    const kinds = kind ? [kind] : (['gr', 'mr', 'inc'] as const)
-    for (const k of kinds) this.docsSvc.reload(k)
+  async reloadDocs(@Query('kind') kind?: 'gr' | 'mr' | 'inc' | 'po') {
+    const kinds = kind ? [kind] : (['gr', 'mr', 'inc', 'po'] as const)
+    for (const k of kinds) await this.docsSvc.reload(k)
     return { reloaded: kinds, meta: kinds.map(k => this.docsSvc.getMeta(k)) }
   }
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule'
 import { TRCloudService } from '../trcloud/trcloud.service'
+import { TrcloudPullService } from '../trcloud/trcloud-pull.service'
 import { DatabaseService } from '../database/database.service'
 
 interface SyncQueueRow {
@@ -18,6 +19,7 @@ export class SyncService {
   constructor(
     private readonly db: DatabaseService,
     private readonly trcloud: TRCloudService,
+    private readonly pull: TrcloudPullService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -76,7 +78,7 @@ export class SyncService {
     switch (row.type) {
       case 'GI': {
         const tx = await this.fetchWithdrawForSync(row.payload['transactionId'] as string)
-        await this.trcloud.postGoodsIssue({
+        const result = await this.trcloud.postGoodsIssue({
           doc_type: 'GI',
           mr_ref: tx.wo_number,
           kind: 'CONSUME',
@@ -90,12 +92,13 @@ export class SyncService {
             unit: l.unit,
           })),
         })
+        await this.pull.pullDocAfterPush('mr', result.doc_number || tx.offline_id)
         break
       }
 
       case 'GR': {
         const rx = await this.fetchReceiveForSync(row.payload['receiveId'] as string)
-        await this.trcloud.postGoodsReceipt({
+        const result = await this.trcloud.postGoodsReceipt({
           doc_type: 'GR',
           po_ref: rx.po_ref,
           warehouse_id: rx.warehouse_code,
@@ -110,6 +113,7 @@ export class SyncService {
             lot: l.lot_number ?? undefined,
           })),
         })
+        await this.pull.pullDocAfterPush('gr', result.doc_number || rx.offline_id)
         break
       }
 

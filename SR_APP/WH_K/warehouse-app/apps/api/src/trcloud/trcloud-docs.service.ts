@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import * as fs from 'fs'
 import * as path from 'path'
 
-export type TrCloudDocKind = 'gr' | 'mr' | 'inc'
+export type TrCloudDocKind = 'gr' | 'mr' | 'inc' | 'po'
 
 export interface TrCloudJsonFile {
   schema_version?: number
@@ -11,7 +11,7 @@ export interface TrCloudJsonFile {
   fetched_at: string
   date_from: string
   date_to: string
-  source: string
+  source?: string
   company_id?: string
   count: number
   summary?: {
@@ -25,10 +25,22 @@ export interface TrCloudJsonFile {
   product_index?: Array<Record<string, unknown>>
 }
 
+export interface IncStockPosition {
+  id: string
+  product_id: string
+  product_name: string
+  warehouse: string
+  unit: string
+  on_hand: number
+  line_count: number
+  doc_count: number
+}
+
 const DOC_META: Record<TrCloudDocKind, { idField: string; envKey: string; defaultFile: string }> = {
   gr: { idField: 'receive_id', envKey: 'TRCLOUD_GR_JSON_PATH', defaultFile: 'gr.json' },
   mr: { idField: 'mr_id', envKey: 'TRCLOUD_MR_JSON_PATH', defaultFile: 'mr.json' },
   inc: { idField: 'document_id', envKey: 'TRCLOUD_INC_JSON_PATH', defaultFile: 'inc.json' },
+  po: { idField: 'po_id', envKey: 'TRCLOUD_PO_JSON_PATH', defaultFile: 'po.json' },
 }
 
 @Injectable()
@@ -38,9 +50,9 @@ export class TRCloudDocsService implements OnModuleInit {
 
   constructor(private readonly config: ConfigService) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     for (const kind of Object.keys(DOC_META) as TrCloudDocKind[]) {
-      this.loadFromFile(kind)
+      await this.reload(kind)
     }
   }
 
@@ -54,7 +66,7 @@ export class TRCloudDocsService implements OnModuleInit {
       fetched_at: c?.fetched_at ?? null,
       date_from: c?.date_from ?? null,
       date_to: c?.date_to ?? null,
-      count: c?.count ?? 0,
+      count: c?.count ?? c?.orders?.length ?? 0,
       source: c?.source ?? 'none',
       company_id: c?.company_id ?? null,
       id_field: meta.idField,
@@ -63,7 +75,90 @@ export class TRCloudDocsService implements OnModuleInit {
   }
 
   getProductIndex(kind: TrCloudDocKind) {
-    return this.caches.get(kind)?.product_index ?? []
+    const cached = this.caches.get(kind)
+    if (cached?.product_index?.length) return cached.product_index
+    if (kind === 'inc') return this.buildProductIndexFromLines(cached?.lines ?? [])
+    return []
+  }
+
+  /** รวมยอดจาก INC lines แยกตาม SKU + คลัง (สำหรับหน้าสต็อกคงคลัง) */
+  getIncStockPositions(params?: { search?: string; limit?: number }): IncStockPosition[] {
+    const lines = this.caches.get('inc')?.lines ?? []
+    const map = new Map<string, IncStockPosition>()
+    const docsPerKey = new Map<string, Set<string>>()
+
+    for (const ln of lines) {
+      const pid = String(ln.product_id ?? '').trim()
+      if (!pid) continue
+      const wh = String(ln.warehouse ?? '—').trim() || '—'
+      const key = `${pid}\0${wh}`
+      const qty = Number(ln.quantity ?? 0) || 0
+
+      let row = map.get(key)
+      if (!row) {
+        row = {
+          id: key,
+          product_id: pid,
+          product_name: String(ln.product_name ?? ln.description ?? ''),
+          warehouse: wh,
+          unit: String(ln.unit ?? ''),
+          on_hand: 0,
+          line_count: 0,
+          doc_count: 0,
+        }
+        map.set(key, row)
+        docsPerKey.set(key, new Set())
+      }
+      row.on_hand += qty
+      row.line_count += 1
+      const docId = String(ln.document_id ?? '')
+      if (docId) docsPerKey.get(key)!.add(docId)
+      if (ln.product_name) row.product_name = String(ln.product_name)
+      if (ln.unit) row.unit = String(ln.unit)
+    }
+
+    for (const [key, row] of map) {
+      row.doc_count = docsPerKey.get(key)?.size ?? 0
+      row.on_hand = Math.round(row.on_hand * 1000) / 1000
+    }
+
+    let rows = Array.from(map.values())
+    if (params?.search) {
+      const q = params.search.toLowerCase()
+      rows = rows.filter(r =>
+        r.product_id.toLowerCase().includes(q) ||
+        r.product_name.toLowerCase().includes(q) ||
+        r.warehouse.toLowerCase().includes(q),
+      )
+    }
+
+    const limit = params?.limit ?? 500
+    return rows
+      .sort((a, b) => a.product_id.localeCompare(b.product_id) || a.warehouse.localeCompare(b.warehouse))
+      .slice(0, limit)
+  }
+
+  private buildProductIndexFromLines(lines: Array<Record<string, unknown>>) {
+    const idx = new Map<string, Record<string, unknown>>()
+    for (const ln of lines) {
+      const pid = String(ln.product_id ?? '').trim()
+      if (!pid) continue
+      const ent = idx.get(pid) ?? {
+        product_id: pid,
+        product_name: '',
+        unit: '',
+        line_count: 0,
+        total_qty: 0,
+      }
+      ent.line_count = Number(ent.line_count) + 1
+      ent.total_qty = Math.round((Number(ent.total_qty) + (Number(ln.quantity ?? 0) || 0)) * 1000) / 1000
+      if (ln.product_name) ent.product_name = ln.product_name
+      if (ln.unit) ent.unit = ln.unit
+      idx.set(pid, ent)
+    }
+    return Array.from(idx.values()).sort((a, b) =>
+      String(a.product_id).localeCompare(String(b.product_id)),
+    )
   }
 
   listOrders(
@@ -140,7 +235,7 @@ export class TRCloudDocsService implements OnModuleInit {
       const raw = fs.readFileSync(jsonPath, 'utf-8')
       const data = JSON.parse(raw) as TrCloudJsonFile
       this.caches.set(kind, data)
-      this.logger.log(`Loaded ${data.count} ${kind.toUpperCase()} orders from ${jsonPath}`)
+      this.logger.log(`Loaded ${data.count ?? data.orders?.length ?? 0} ${kind.toUpperCase()} orders from ${jsonPath}`)
       return true
     } catch (e) {
       this.logger.warn(`Cannot load ${kind.toUpperCase()} JSON: ${e}`)
@@ -149,7 +244,30 @@ export class TRCloudDocsService implements OnModuleInit {
     }
   }
 
-  reload(kind: TrCloudDocKind) {
+  async reloadFromGcs(kind: TrCloudDocKind): Promise<boolean> {
+    const bucket = this.config.get('TRCLOUD_GCS_BUCKET', 'kitchen-sepon-data')
+    const gcsPath = `trcloud/snapshots/${kind}/latest.json`
+
+    try {
+      const { Storage } = await import('@google-cloud/storage')
+      const storage = new Storage()
+      const [content] = await storage.bucket(bucket).file(gcsPath).download()
+      const data = JSON.parse(content.toString('utf-8')) as TrCloudJsonFile
+      this.caches.set(kind, data)
+      this.logger.log(`GCS reload: ${kind.toUpperCase()} ${data.count ?? data.orders?.length ?? 0} records`)
+      return true
+    } catch (err) {
+      this.logger.warn(`GCS reload failed for ${kind}: ${(err as Error).message}`)
+      return false
+    }
+  }
+
+  async reload(kind: TrCloudDocKind): Promise<boolean> {
+    const useGcs = this.config.get('SYNC_TRIGGER_MODE') === 'gcp'
+    if (useGcs) {
+      const loaded = await this.reloadFromGcs(kind)
+      if (loaded) return true
+    }
     return this.loadFromFile(kind)
   }
 }

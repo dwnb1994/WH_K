@@ -26,6 +26,7 @@ export const QK = {
   mrLines:       (id?: string | null) => ['mrLines', id] as const,
   inboundCargo:  (params?: object) => ['inboundCargo', params] as const,
   incLines:      (id?: string | null) => ['incLines', id] as const,
+  incStock:      (params?: object) => ['incStock', params] as const,
   items:       (search?: string) => ['items', search] as const,
   employees:   () => ['employees'] as const,
   syncStatus:  () => ['syncStatus'] as const,
@@ -207,6 +208,14 @@ export function useInboundCargoLines(documentId: string | null) {
   })
 }
 
+export function useIncStock(params?: { search?: string; limit?: number }) {
+  return useQuery({
+    queryKey: QK.incStock(params),
+    queryFn: () => warehouseApi.getIncStock(params),
+    staleTime: 60_000,
+  })
+}
+
 export function useReloadTrCloudDocs() {
   const qc = useQueryClient()
   return useMutation({
@@ -218,6 +227,7 @@ export function useReloadTrCloudDocs() {
       qc.invalidateQueries({ queryKey: ['grLines'] })
       qc.invalidateQueries({ queryKey: ['mrLines'] })
       qc.invalidateQueries({ queryKey: ['incLines'] })
+      qc.invalidateQueries({ queryKey: ['incStock'] })
     },
   })
 }

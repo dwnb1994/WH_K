@@ -25,10 +25,10 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from trcloud_auth import get_cookie_for_company
-from trcloud_commonK import TRCloudICSFetcher, _to_number
+from trcloud_commonK import TRCloudICSFetcher, _to_number, filter_records_by_project
 from trcloud_env import env, env_bool
 from trcloud_GRK import GR_CONFIG
-from trcloud_INC import INC_CONFIG
+from trcloud_INC_K import INC_CONFIG
 from trcloud_MRK import MR_CONFIG
 from trcloud_POK import PO_CONFIG
 
@@ -298,12 +298,16 @@ def publish_reload_event(topic: str, manifest: dict[str, Any]) -> None:
     print(f"Published reload event: {topic_path}")
 
 
-def fetch_payload(doc_type: str, date_from: str, date_to: str, cookie: str, company_id: str, passkey: str, sleep_between: float) -> dict[str, Any]:
+def fetch_payload(doc_type: str, date_from: str, date_to: str, cookie: str, company_id: str, passkey: str, sleep_between: float, project_filter: str = "") -> dict[str, Any]:
     cfg = DOC_CONFIGS[doc_type]
     fetcher = TRCloudICSFetcher(cfg, company_id, passkey, cookie)
     records = fetcher.fetch_list(date_from, date_to, sleep_between=sleep_between)
+    records = filter_records_by_project(records, project_filter, doc_type)
     items, detail_heads = fetcher.extract_items(records, sleep_between=sleep_between) if records else ([], {})
-    payload = fetcher.build_json_payload(records, items, date_from, date_to, detail_heads, company_id=company_id)
+    payload = fetcher.build_json_payload(
+        records, items, date_from, date_to, detail_heads,
+        company_id=company_id, project_filter=project_filter,
+    )
     return add_hashes(doc_type, payload)
 
 
@@ -351,6 +355,7 @@ def main() -> int:
     args = parser.parse_args()
 
     company_id = env("TRCLOUD_COMPANY_ID", "14")
+    project_filter = env("TRCLOUD_PROJECT", "TN")
     passkey = env("TRCLOUD_PASSKEY")
     origin_passkey = env("TRCLOUD_ORIGIN_PASSKEY")
     use_switch = env_bool("TRCLOUD_USE_COMPANY_SWITCH", True)
@@ -386,6 +391,7 @@ def main() -> int:
         "date_from": date_from,
         "date_to": date_to,
         "company_id": company_id,
+        "project_filter": project_filter or None,
         "doc_types": docs,
         "outputs": {},
         "summary": {},
@@ -395,7 +401,7 @@ def main() -> int:
     for doc_type in docs:
         print(f"\n=== Sync {doc_type} {date_from} -> {date_to} ({args.mode}) ===")
         started = time.time()
-        payload = fetch_payload(doc_type, date_from, date_to, cookie, company_id, passkey, args.sleep)
+        payload = fetch_payload(doc_type, date_from, date_to, cookie, company_id, passkey, args.sleep, project_filter)
         changed = mark_changes(doc_type, payload, state, args.mode)
 
         latest_path = root / "snapshots" / doc_type.lower() / "latest.json"
